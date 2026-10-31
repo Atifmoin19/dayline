@@ -130,13 +130,23 @@ const Login: React.FC = () => {
             opacity={0.12}
             bgImage="radial-gradient(circle at 80% 10%, white 0, transparent 40%), radial-gradient(circle at 10% 90%, white 0, transparent 35%)"
           />
-          <Flex align="center" gap={3} zIndex={1}>
+          <Flex
+            as={RouterLink}
+            to="/"
+            aria-label="Dayline home"
+            align="center"
+            gap={3}
+            zIndex={1}
+            w="fit-content"
+            borderRadius="md"
+            _focusVisible={{ outline: "2px solid white", outlineOffset: "4px" }}
+          >
             <Flex w="40px" h="40px" borderRadius="0.7rem" align="center" justify="center" bg="whiteAlpha.300">
               <Icon as={FaRegCheckCircle} boxSize={5} />
             </Flex>
             <Box lineHeight="1.1">
               <Text fontSize="lg" fontWeight={700} color="white">Dayline</Text>
-              <Text fontSize="xs" color="whiteAlpha.800">Enterprise Edition</Text>
+              <Text fontSize="xs" color="whiteAlpha.800">Team scheduling, live</Text>
             </Box>
           </Flex>
 
@@ -145,7 +155,7 @@ const Login: React.FC = () => {
               Plan, track and ship work with your team.
             </Heading>
             <Text fontSize="sm" color="whiteAlpha.900">
-              Real-time scheduling, capacity-aware assignment and a live timeline —
+              Real-time scheduling, capacity-aware assignment and a live timeline,
               built for engineering teams.
             </Text>
           </Box>
