@@ -1,38 +1,10 @@
-import { Button, Flex, Text, useToast } from "@chakra-ui/react";
-import { useNavigate } from "react-router-dom";
-import { useAppDispatch } from "app/hooks";
-import { setCurrentUser, setToken } from "app/slices/scheduler.slice";
-import { useDelayedFlag } from "hooks/useDelayedFlag";
-import { useStartDemoMutation } from "Services/user.api";
-import { getApiErrorMessage } from "Services/baseQuery";
-import { DemoPersona } from "types";
-import { APP_HOME } from "Utils/constants";
+import { Button, Flex, Text } from "@chakra-ui/react";
+import { useDemoLaunch } from "hooks/useDemoLaunch";
+import { BRAND_GLOW } from "Styles";
 
-/** Free hosts sleep when idle; past this, tell the visitor why the first request is slow. */
-const WAKING_AFTER_MS = 2500;
-
-/** "Try the demo": starts an isolated POST /demo workspace and signs straight into it. */
-const DemoLauncher = () => {
-  const [startDemo, { isLoading }] = useStartDemoMutation();
-  const waking = useDelayedFlag(isLoading, WAKING_AFTER_MS);
-  const dispatch = useAppDispatch();
-  const navigate = useNavigate();
-  const toast = useToast();
-
-  const launch = async (persona: DemoPersona) => {
-    try {
-      const result = await startDemo({ persona }).unwrap();
-      dispatch(setToken(result.token));
-      dispatch(setCurrentUser({ ...result.userData, demo_expires_at: result.demo?.expires_at }));
-      navigate(APP_HOME, { replace: true });
-    } catch (error) {
-      toast({
-        title: "Couldn't start the demo",
-        description: getApiErrorMessage(error, "Please try again in a moment."),
-        status: "error",
-      });
-    }
-  };
+/** "Try the demo": a manager demo by default, with a link to the developer persona. */
+const DemoLauncher = ({ tone = "outline" }: { tone?: "outline" | "solid" }) => {
+  const { launch, isLoading, waking } = useDemoLaunch();
 
   return (
     <Flex direction="column" align="center" gap={1}>
@@ -40,8 +12,11 @@ const DemoLauncher = () => {
         type="button"
         width="full"
         size="lg"
-        variant="outline"
+        variant={tone}
         colorScheme="brand"
+        {...(tone === "solid"
+          ? { bg: "brand.600", color: "white", boxShadow: BRAND_GLOW, _hover: { bg: "brand.700" }, _active: { bg: "brand.800" } }
+          : {})}
         isLoading={isLoading}
         loadingText={waking ? "Waking the server…" : "Setting up your demo…"}
         onClick={() => launch("manager")}
@@ -53,14 +28,14 @@ const DemoLauncher = () => {
         variant="link"
         size="sm"
         colorScheme="brand"
-        color="brand.700"
+        color={tone === "solid" ? "inherit" : "brand.700"}
         isDisabled={isLoading}
         onClick={() => launch("developer")}
       >
         or explore as a developer
       </Button>
       {waking && (
-        <Text fontSize="xs" color="neutral.500" role="status">
+        <Text fontSize="xs" color={tone === "solid" ? "inherit" : "neutral.500"} role="status">
           The first request after a quiet spell can take up to a minute.
         </Text>
       )}
