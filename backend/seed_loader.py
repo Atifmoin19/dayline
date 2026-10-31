@@ -36,10 +36,17 @@ def _topo_order(users: list) -> list:
     return sorted(users, key=depth)
 
 
-def _unique_ticket(db, model, prefix: str, digits: int) -> str:
+def _unique_ticket(db, model, prefix: str, digits: int, taken: set) -> str:
+    """A random ticket id that is neither stored yet nor already handed out in this batch.
+
+    `taken` matters: the session runs with autoflush=False, so rows added earlier in the same
+    insert are invisible to the query and two of them could draw the same number."""
     while True:
         ticket = f"{prefix}-{secrets.randbelow(10 ** digits):0{digits}d}"
+        if ticket in taken:
+            continue
         if not db.query(model.id).filter(model.ticket_id == ticket).first():
+            taken.add(ticket)
             return ticket
 
 
@@ -51,6 +58,7 @@ def insert_seed(db, data: dict, now, *, password_hash: str, workspace_id: str | 
     Commits once at the end.
     """
     ws = workspace_id
+    taken: set = set()
 
     def emp(seed_id):
         return f"{ws}-{seed_id}" if ws and seed_id else seed_id
@@ -78,7 +86,7 @@ def insert_seed(db, data: dict, now, *, password_hash: str, workspace_id: str | 
         epic_ids[e["id"]] = obj_id(e["id"])
         db.add(Epic(
             id=epic_ids[e["id"]],
-            ticket_id=_unique_ticket(db, Epic, "E", 5) if ws else e.get("ticket_id"),
+            ticket_id=_unique_ticket(db, Epic, "E", 5, taken) if ws else e.get("ticket_id"),
             name=e["name"], description=e.get("description"), status=e.get("status"),
             owner_id=emp_map.get(e.get("owner_id")), department=e.get("department"),
             start_date=now + timedelta(days=e.get("start_offset_days", 0)),
@@ -103,7 +111,7 @@ def insert_seed(db, data: dict, now, *, password_hash: str, workspace_id: str | 
         due = now + timedelta(days=t.get("due_offset_days", 7))
         db.add(Task(
             id=task_ids[t["key"]],
-            ticket_id=_unique_ticket(db, Task, "T", 5) if ws else t.get("ticket_id"),
+            ticket_id=_unique_ticket(db, Task, "T", 5, taken) if ws else t.get("ticket_id"),
             task_name=t["task_name"], task_description=t.get("task_description"),
             task_status=t["task_status"],
             task_assigned_to=emp_map[t["task_assigned_to"]], task_assigned_by=emp_map[t["task_assigned_by"]],

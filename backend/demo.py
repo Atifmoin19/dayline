@@ -34,7 +34,16 @@ from models import (
 from security import hash_password
 from seed_loader import insert_seed, load_seed
 
-PERSONAS = {"manager": "QB0001", "developer": "QB0004"}
+# Persona -> seed emp_id. manager = the CTO (whole org); team_lead = a tech lead with two
+# reports; employee_1 / employee_2 = ICs on different teams. "developer" is the pre-persona
+# name for employee_1, kept so older clients keep working.
+PERSONAS = {
+    "manager": "QB0001",      # Odile Marchetti, CTO
+    "team_lead": "QB0003",    # Wren Takahashi, Tech Lead (Platform): Mira + Tomas
+    "employee_1": "QB0004",   # Mira Okafor, Senior Software Engineer (Platform)
+    "employee_2": "QB0008",   # Saoirse Brannigan, UI/UX Designer (Mobile)
+    "developer": "QB0004",
+}
 
 
 def _env_int(name: str, default: int) -> int:

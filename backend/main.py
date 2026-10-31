@@ -977,14 +977,15 @@ def _issue_session(db, foundation, user) -> dict:
 
 
 class DemoRequest(BaseModel):
-    persona: Literal["manager", "developer"] = "manager"
+    persona: Literal["manager", "team_lead", "employee_1", "employee_2", "developer"] = "manager"
 
 
 @app.post('/demo', status_code=200, summary="Start a disposable demo workspace (DEMO_MODE_ENABLED only)")
 def start_demo(request: Request, payload: DemoRequest | None = None, db=Depends(get_db)):
     """Purges expired demo workspaces, creates a fresh isolated copy of the Quillbrook Labs
     demo org, and logs the caller in as the chosen persona (manager = the CTO, who sees the
-    whole demo org; developer = a senior engineer). Same response shape as POST /login,
+    whole demo org; team_lead = a tech lead and their reports; employee_1 / employee_2 = ICs
+    on different teams; "developer" is an alias of employee_1). Same response shape as POST /login,
     plus `demo: {workspace_id, persona, expires_at}`. See demo.py for settings."""
     if not demo_mod.enabled():
         raise HTTPException(status_code=404, detail="Not Found")
@@ -998,7 +999,16 @@ def start_demo(request: Request, payload: DemoRequest | None = None, db=Depends(
     if demo_mod.live_count(db, now) >= demo_mod.max_live_workspaces():
         raise HTTPException(status_code=429, detail="The demo is at capacity right now. Try again later.")
 
-    workspace, user = demo_mod.create_workspace(db, now, persona, ip_hash)
+    # Ticket ids are random and checked before insert, but two concurrent requests can still
+    # draw the same one between check and commit; the unique index catches it, so retry.
+    for attempt in range(3):
+        try:
+            workspace, user = demo_mod.create_workspace(db, now, persona, ip_hash)
+            break
+        except IntegrityError:
+            db.rollback()
+            if attempt == 2:
+                raise HTTPException(status_code=503, detail="Couldn't create the demo workspace. Please try again.")
     foundation = db.query(Foundation).filter(Foundation.emp_id == user.emp_id).one()
     data = _issue_session(db, foundation, user)
     data["demo"] = {
