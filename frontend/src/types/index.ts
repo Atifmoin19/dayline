@@ -194,7 +194,8 @@ export interface AuthResponse {
     userData: Employee;
 }
 
-export type DemoPersona = "manager" | "developer";
+/** "developer" is the older name for employee_1, still accepted by POST /demo. */
+export type DemoPersona = "manager" | "team_lead" | "employee_1" | "employee_2" | "developer";
 
 export interface DemoResponse extends AuthResponse {
     demo: { workspace_id: string; persona: DemoPersona; expires_at: string };
@@ -370,8 +371,9 @@ export interface RebalanceSuggestion {
     reason: string;
 }
 
-// GET /insights — Gemini-generated decision-support summary sitting on top of /capacity and
-// /tasks. `available: false` means Gemini isn't configured or failed — not an error state.
+// GET /insights — decision-support summary sitting on top of /capacity and /tasks. Written by
+// Gemini (`source: "ai"`) or, when Gemini isn't configured or fails, by deterministic rules
+// (`source: "rules"`). `available: false` only comes from older servers.
 //
 // `at_risk_tasks`/`rebalance_suggestions` are computed by deterministic backend logic
 // BEFORE the Gemini-availability check, so they are populated (possibly empty arrays)
@@ -380,6 +382,7 @@ export interface RebalanceSuggestion {
 // predates this field) — treat a missing value as an empty array, not as "unavailable".
 export interface InsightsResponse {
     available: boolean;
+    source?: "ai" | "rules";
     summary: string | null;
     recommendations: string[];
     reason: string | null;

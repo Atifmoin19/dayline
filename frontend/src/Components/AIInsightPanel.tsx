@@ -74,6 +74,16 @@ const AIInsightPanel: React.FC = () => {
           >
             AI Insight
           </Text>
+          {data?.source === "rules" && (
+            <Badge
+              colorScheme="gray"
+              variant="subtle"
+              fontSize="0.65rem"
+              title="Built from your team's tasks and capacity by fixed rules, without the AI model."
+            >
+              Rules-based
+            </Badge>
+          )}
         </HStack>
         {!!data?.scope_employee_count && (
           <Text fontSize="xs" color="neutral.500">
@@ -100,7 +110,7 @@ const AIInsightPanel: React.FC = () => {
             <Text fontSize="xs" color="neutral.500" mt={1}>
               {isError
                 ? "Could not reach the insight service right now."
-                : data?.reason || "AI insight isn't configured for this environment."}
+                : "No summary is available right now."}
             </Text>
           </Box>
         </Flex>

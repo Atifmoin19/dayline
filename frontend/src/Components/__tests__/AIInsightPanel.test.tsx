@@ -75,6 +75,30 @@ describe("AIInsightPanel", () => {
     expect(screen.queryByText("Rebalance Suggestions")).not.toBeInTheDocument();
   });
 
+  it("never shows the server's raw failure reason", () => {
+    mockedUseInsightsQuery.mockReturnValue({
+      data: { ...baseInsights, reason: "429 RESOURCE_EXHAUSTED quota" },
+      isLoading: false, isFetching: false, isError: false,
+    });
+    renderPanel();
+    expect(screen.queryByText(/RESOURCE_EXHAUSTED/)).not.toBeInTheDocument();
+  });
+
+  it("labels a rules-based insight and shows its summary and recommendations", () => {
+    mockedUseInsightsQuery.mockReturnValue({
+      data: {
+        ...baseInsights, available: true, source: "rules", reason: null,
+        summary: "Across 3 people, there are 2 in progress; 1 overdue.",
+        recommendations: ["Re-plan the 1 overdue task.", "Next up: \"Ship\" is due today."],
+      },
+      isLoading: false, isFetching: false, isError: false,
+    });
+    renderPanel();
+    expect(screen.getByText("Rules-based")).toBeInTheDocument();
+    expect(screen.getByText(/Across 3 people/)).toBeInTheDocument();
+    expect(screen.getByText("Re-plan the 1 overdue task.")).toBeInTheDocument();
+  });
+
   it("renders at-risk tasks and rebalance suggestions even when available is false (the critical backend contract)", () => {
     mockedUseInsightsQuery.mockReturnValue({
       data: {
