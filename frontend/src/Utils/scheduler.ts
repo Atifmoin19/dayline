@@ -1,5 +1,6 @@
 import { Task, Employee, CompanyConfig, TaskBlock } from "types";
 import { parseDurationToHours } from "Utils/common";
+import { normalizeServerTimestamp } from "Utils/serverTime";
 
 // One business timezone for the whole timeline, so hour-of-day and date-key math is identical
 // for every viewer regardless of their browser tz (server stores UTC). Override via
@@ -75,14 +76,8 @@ export const calculateSchedule = (
     const schedule: Record<string, TaskBlock[]> = {};
     const EPSILON = 0.01; // Tolerance for float comparison (increased to catch gaps)
 
-    // Helper to ensure timestamps are treated as UTC if missing timezone offset
-    const fixTime = (t: string) => {
-        if (!t) return t;
-        if (!t.endsWith('Z') && !t.includes('+')) {
-            return t + 'Z';
-        }
-        return t;
-    };
+    // Naive server timestamps are UTC; values with an explicit zone are kept as-is.
+    const fixTime = normalizeServerTimestamp;
 
     developers.forEach(dev => {
         schedule[dev.emp_id] = [];
