@@ -11,7 +11,11 @@ import { SUPER_ADMIN_ROLES, APP_HOME } from "Utils/constants";
 // warning). Login is kept eager since it's commonly the first screen an unauthenticated
 // user hits, and is cheap on its own.
 const Login = lazy(() => import("Pages/login"));
-const Landing = lazy(() => import("Pages/Landing"));
+const loadLanding = () => import("Pages/Landing");
+// Visitors to "/" need the landing chunk right away: start fetching it while the app boots
+// instead of after the first render, which shortens the hero's paint on slow networks.
+if (typeof window !== "undefined" && window.location.pathname === "/") void loadLanding();
+const Landing = lazy(loadLanding);
 const Onboarding = lazy(() => import("Pages/onboarding"));
 const Dashboard = lazy(() => import("Pages/dashboard"));
 const TaskListPage = lazy(() => import("Pages/taskList"));

@@ -1,278 +1,335 @@
-import { useMemo } from "react";
+import { useRef } from "react";
 import { Link as RouterLink } from "react-router-dom";
-import {
-  Badge,
-  Box,
-  Button,
-  Container,
-  Flex,
-  Heading,
-  Icon,
-  Link,
-  List,
-  ListIcon,
-  ListItem,
-  SimpleGrid,
-  Stack,
-  Text,
-} from "@chakra-ui/react";
-import { Check, CircleCheck, Gauge, Pause, Play, RotateCcw, ShieldCheck } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
+import { FaGithub } from "react-icons/fa";
 import { useAppSelector } from "app/hooks";
 import DemoLauncher from "Components/Demo/DemoLauncher";
-import MiniTimeline from "Components/Landing/MiniTimeline";
-import { BRAND_GLOW, BRAND_GRADIENT, HERO_GRADIENT } from "Styles";
+import AppShowcase from "Components/Landing/AppShowcase";
+import { CapacityChart, OverdueLanes } from "Components/Landing/CapacityExplainer";
+import HeroTimeline from "Components/Landing/HeroTimeline";
+import TeamDayDemo from "Components/Landing/TeamDayDemo";
+import { useScrollReveal } from "Components/Landing/hooks";
+import { useDemoLaunch } from "hooks/useDemoLaunch";
 import { APP_HOME, DEMO_ENABLED, GITHUB_URL, PORTFOLIO_URL } from "Utils/constants";
-import { buildSampleDay } from "Utils/landingSample";
+import { DemoPersona } from "types";
+import "./landing.css";
 
-const STEPS = [
-  { icon: Play, title: "Pick", body: "Start a task and a work session opens on your timeline. No timer to remember." },
-  { icon: Pause, title: "Hold", body: "Switch to something urgent. The session closes and the task waits, time kept." },
-  { icon: RotateCcw, title: "Resume", body: "Pick it back up and a new session starts. Every stretch of work is recorded." },
-  { icon: CircleCheck, title: "Done", body: "Close it out. Time spent is the sum of real sessions, not a guess." },
-];
-
-const ROLES = [
-  { who: "Individual contributors", sees: "Their own tasks and timeline." },
-  { who: "Leads and managers", sees: "Everyone in their reporting line, however deep." },
-  { who: "Admins", sees: "People and roles, with an audit log of every change." },
-  { who: "Scoped grants", sees: "Department admins and read-only auditors, without full admin." },
-];
-
-const Section = ({ id, eyebrow, title, children }: { id: string; eyebrow: string; title: string; children: React.ReactNode }) => (
-  <Box as="section" aria-labelledby={`${id}-title`} py={{ base: 12, md: 20 }}>
-    <Container maxW="6xl" px={{ base: 4, md: 8 }}>
-      <Text fontSize="xs" fontWeight={700} letterSpacing="0.12em" textTransform="uppercase" color="brand.600" mb={2}>
-        {eyebrow}
-      </Text>
-      <Heading id={`${id}-title`} as="h2" fontSize={{ base: "2xl", md: "3xl" }} color="neutral.900" mb={{ base: 6, md: 8 }} maxW="2xl">
-        {title}
-      </Heading>
-      {children}
-    </Container>
-  </Box>
+const Logo = () => (
+  <span className="dl-logo">
+    <img src="/dayline.svg" alt="" width={28} height={28} />
+    <span>Dayline</span>
+  </span>
 );
 
-const Card = (props: React.ComponentProps<typeof Box>) => (
-  <Box bg="white" borderWidth="1px" borderColor="neutral.200" borderRadius="xl" p={{ base: 4, md: 6 }} boxShadow="sm" {...props} />
-);
+const ROLES: { persona: DemoPersona; who: string; title: string; shot: string; alt: string; sees: string[]; does: string[] }[] = [
+  {
+    persona: "manager",
+    who: "Odile Marchetti",
+    title: "Chief Technology Officer",
+    shot: "/landing/my-work-manager.webp",
+    alt: "The CTO's My Work: 10 active tasks, 8 pending, 1 overdue and 12 team members, with an at-risk task flagged.",
+    sees: [
+      "Every task of the 11 people in her reporting line",
+      "The team timeline, week and calendar for anyone below her",
+      "At-risk tasks, capacity, reports and the resource heatmap",
+    ],
+    does: ["Assigns and reprioritises work", "Runs epics, the roadmap and sprints", "Manages people and roles, with an audit log (admin only, off in the demo)"],
+  },
+  {
+    persona: "developer",
+    who: "Mira Okafor",
+    title: "Senior Software Engineer",
+    shot: "/landing/my-work-developer.webp",
+    alt: "The developer's My Work: her own in-progress, pending and completed counts, time logged, and her own schedule.",
+    sees: [
+      "Her own tasks, timeline, week and calendar",
+      "The org chart with her line: Wren, then Kasimir, then Odile",
+      "Company-wide epics, roadmap and sprints",
+    ],
+    does: ["Picks, holds, resumes and finishes work; the hours log themselves", "Comments, attaches images, links tasks and splits them into subtasks", "Gets a nudge when assigned work sits unpicked"],
+  },
+];
+
+const ENGINEERING = [
+  { k: "Live", t: "WebSocket updates", d: "A pick, hold or edit on one screen shows up on every other open screen." },
+  { k: "Jobs", t: "In-process scheduler", d: "The overdue sweep every 60 seconds and the hourly demo purge, guarded by Postgres advisory locks so only one instance runs each job." },
+  { k: "Demo", t: "Isolated workspaces", d: "Every visitor gets their own copy of the sample company, scoped by workspace and purged when it expires." },
+  { k: "Tests", t: "247 backend + 170 frontend", d: "pytest against Postgres for the API and rules, Vitest and Testing Library for the UI." },
+  { k: "Host", t: "One free process", d: "FastAPI and Postgres. No Redis, no worker: sessions and fan-out fall back to the database and the process." },
+];
+
+/** Persona button for the demo section. */
+const PersonaButton = ({ persona, label }: { persona: DemoPersona; label: string }) => {
+  const { launch, isLoading, waking } = useDemoLaunch();
+  return (
+    <span className="dl-persona__cta">
+      <button type="button" className="dl-btn dl-btn--primary" onClick={() => launch(persona)} disabled={isLoading} aria-busy={isLoading}>
+        {isLoading ? (waking ? "Waking the server…" : "Setting up your demo…") : label}
+        {!isLoading && <ArrowRight size={16} aria-hidden="true" />}
+      </button>
+      {waking && <span className="dl-persona__wait" role="status">The first request after a quiet spell can take up to a minute.</span>}
+    </span>
+  );
+};
 
 /** Public landing page at "/". Signed-in visitors get "Open app" instead of the sign-in buttons. */
 const Landing = () => {
   const signedIn = useAppSelector((state) => Boolean(state.scheduler.currentUser));
-  const sample = useMemo(() => buildSampleDay(), []);
+  const root = useRef<HTMLDivElement>(null);
+  useScrollReveal(root);
 
-  const primary = signedIn ? (
-    <Button as={RouterLink} to={APP_HOME} size="lg" bg={BRAND_GRADIENT} color="white" boxShadow={BRAND_GLOW} _hover={{ opacity: 0.92 }}>
-      Open app
-    </Button>
-  ) : null;
+  const ctas = (where: "hero" | "band") =>
+    signedIn ? (
+      <div className="dl-ctas">
+        <RouterLink to={APP_HOME} className="dl-btn dl-btn--primary dl-btn--lg">
+          Open app <ArrowRight size={18} aria-hidden="true" />
+        </RouterLink>
+      </div>
+    ) : (
+      <div className="dl-ctas">
+        {DEMO_ENABLED && (
+          <div className={`dl-ctas__demo dl-ctas__demo--${where}`}>
+            <DemoLauncher tone="solid" />
+          </div>
+        )}
+        <RouterLink to="/login" className={`dl-btn dl-btn--lg ${DEMO_ENABLED ? "dl-btn--outline" : "dl-btn--primary"}`}>
+          Sign in
+        </RouterLink>
+      </div>
+    );
 
   return (
-    <Box bg="surface.page" minH="100vh" sx={{ "@media (prefers-reduced-motion: reduce)": { "*": { transition: "none !important", animation: "none !important" } } }}>
-      <Box as="header" borderBottomWidth="1px" borderColor="neutral.200" bg="whiteAlpha.900" position="sticky" top={0} zIndex={10} backdropFilter="saturate(180%) blur(8px)">
-        <Container maxW="6xl" px={{ base: 4, md: 8 }}>
-          <Flex h="60px" align="center" justify="space-between">
-            <Flex align="center" gap={2}>
-              <Flex w="30px" h="30px" borderRadius="lg" bg={BRAND_GRADIENT} align="center" justify="center" color="white">
-                <Icon as={Check} boxSize={4} />
-              </Flex>
-              <Text fontWeight={800} fontSize="lg" color="neutral.900">Dayline</Text>
-            </Flex>
-            {signedIn ? (
-              <Button as={RouterLink} to={APP_HOME} size="sm" colorScheme="brand">Open app</Button>
-            ) : (
-              <Button as={RouterLink} to="/login" size="sm" variant="ghost" colorScheme="brand">Sign in</Button>
-            )}
-          </Flex>
-        </Container>
-      </Box>
+    <div className="dl" ref={root}>
+      <a href="#main" className="dl-skip">Skip to content</a>
+      <header className="dl-header">
+        <div className="dl-wrap dl-header__in">
+          <RouterLink to="/" className="dl-header__brand" aria-label="Dayline home"><Logo /></RouterLink>
+          <nav className="dl-header__nav" aria-label="Sections">
+            <a href="#team-day">How it works</a>
+            <a href="#inside">Inside the app</a>
+            <a href="#roles">Roles</a>
+            {DEMO_ENABLED && <a href="#demo">Demo</a>}
+          </nav>
+          {signedIn ? (
+            <RouterLink to={APP_HOME} className="dl-btn dl-btn--sm dl-btn--primary">Open app</RouterLink>
+          ) : (
+            <RouterLink to="/login" className="dl-btn dl-btn--sm dl-btn--outline">Sign in</RouterLink>
+          )}
+        </div>
+      </header>
 
-      <Box as="main">
-        <Box bg={HERO_GRADIENT} pt={{ base: 12, md: 20 }} pb={{ base: 10, md: 16 }}>
-          <Container maxW="6xl" px={{ base: 4, md: 8 }}>
-            <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={{ base: 10, lg: 14 }} alignItems="center">
-              <Stack spacing={6}>
-                <Badge alignSelf="flex-start" colorScheme="brand" variant="subtle" borderRadius="full" px={3} py={1} textTransform="none" fontWeight={600}>
-                  Task scheduling for teams
-                </Badge>
-                <Heading as="h1" fontSize={{ base: "3xl", sm: "4xl", md: "5xl" }} lineHeight={1.1} color="neutral.900" letterSpacing="-0.02em">
-                  See your team&apos;s day as it actually happens.
-                </Heading>
-                <Text fontSize={{ base: "md", md: "lg" }} color="neutral.600" maxW="xl">
-                  Dayline plans tasks onto a live day timeline, records real work sessions as people pick,
-                  hold and finish work, and warns you about overload and overdue work before it bites.
-                </Text>
-                {primary ?? (
-                  <Stack direction={{ base: "column", sm: "row" }} spacing={3} align={{ base: "stretch", sm: "flex-start" }}>
-                    {DEMO_ENABLED && (
-                      <Box minW={{ sm: "240px" }}>
-                        <DemoLauncher />
-                      </Box>
-                    )}
-                    <Button
-                      as={RouterLink}
-                      to="/login"
-                      size="lg"
-                      {...(DEMO_ENABLED
-                        ? { variant: "ghost", colorScheme: "brand" }
-                        : { bg: BRAND_GRADIENT, color: "white", boxShadow: BRAND_GLOW, _hover: { opacity: 0.92 } })}
-                    >
-                      Sign in
-                    </Button>
-                  </Stack>
+      <main id="main">
+        <section className="dl-hero" aria-labelledby="hero-title">
+          <div className="dl-wrap dl-hero__grid">
+            <div className="dl-hero__copy">
+              <p className="dl-eyebrow">Task scheduling and time tracking for teams</p>
+              <h1 id="hero-title" className="dl-display">
+                Your team&apos;s day, <span className="dl-mark">live</span> on one timeline.
+              </h1>
+              <p className="dl-lede">
+                Dayline puts every task on a shared day timeline. People pick, hold and finish work, the hours log
+                themselves, and you see overload and overdue work before it slips.
+              </p>
+              {ctas("hero")}
+              {DEMO_ENABLED && !signedIn && (
+                <ul className="dl-ticks" aria-label="About the demo">
+                  <li><Check size={14} aria-hidden="true" /> No sign-up</li>
+                  <li><Check size={14} aria-hidden="true" /> Your own sample company</li>
+                  <li><Check size={14} aria-hidden="true" /> Resets in 24 hours</li>
+                </ul>
+              )}
+            </div>
+            <div className="dl-hero__visual">
+              <HeroTimeline />
+              <p className="dl-hero__note">Running on Dayline&apos;s own scheduling code. Hover a bar.</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="team-day" className="dl-section" aria-labelledby="team-day-title">
+          <div className="dl-wrap">
+            <div className="dl-head dl-reveal">
+              <p className="dl-eyebrow">See your team&apos;s whole day</p>
+              <h2 id="team-day-title" className="dl-h2">Click a task. Watch the day recompute.</h2>
+              <p className="dl-sub">
+                Four people from the sample company, mid-afternoon. Pick, hold, resume or finish anything: the bars come from
+                the same scheduler the app runs, and the backend&apos;s rules apply as the clock moves.
+              </p>
+            </div>
+            <div className="dl-reveal">
+              <TeamDayDemo />
+            </div>
+            <ul className="dl-rules dl-reveal">
+              <li><strong>One running task per person.</strong> Picking something new holds what you had open, time kept.</li>
+              <li><strong>Time is sessions, not guesses.</strong> Logged hours are the sum of real pick-to-hold stretches.</li>
+              <li><strong>Watch 15:30 and 19:00.</strong> An unstarted task passes its due time; the day ends with work still open.</li>
+            </ul>
+          </div>
+        </section>
+
+        <section id="inside" className="dl-section dl-section--tint" aria-labelledby="inside-title">
+          <div className="dl-wrap">
+            <div className="dl-head dl-reveal">
+              <p className="dl-eyebrow">Inside the app</p>
+              <h2 id="inside-title" className="dl-h2">What you get after you sign in.</h2>
+              <p className="dl-sub">Screens from the demo workspace, as the CTO and as a developer.</p>
+            </div>
+            <div className="dl-reveal">
+              <AppShowcase />
+            </div>
+          </div>
+        </section>
+
+        <section id="capacity" className="dl-section" aria-labelledby="capacity-title">
+          <div className="dl-wrap">
+            <div className="dl-head dl-reveal">
+              <p className="dl-eyebrow">Capacity and overdue</p>
+              <h2 id="capacity-title" className="dl-h2">Know who is overloaded before the deadline does.</h2>
+            </div>
+            <div className="dl-split">
+              <div className="dl-reveal">
+                <h3 className="dl-h3">How capacity is counted</h3>
+                <p className="dl-formula">
+                  (<span>worked today</span> + <span>not started yet</span>) ÷ <span>9 h day, 10:00 to 19:00</span>
+                </p>
+                <p className="dl-body">
+                  Unstarted work fills today&apos;s headroom first and spills into tomorrow. A person is{" "}
+                  <span className="dl-cap dl-cap--available">Available</span> under 70%,{" "}
+                  <span className="dl-cap dl-cap--at_capacity">At capacity</span> up to 100% and{" "}
+                  <span className="dl-cap dl-cap--over_capacitated">Over capacity</span> beyond it, judged on their worst day.
+                </p>
+                <CapacityChart />
+              </div>
+              <div className="dl-reveal">
+                <h3 className="dl-h3">When work slips</h3>
+                <p className="dl-body">A sweep runs every 60 seconds, and once at startup, and keeps the board honest on its own.</p>
+                <OverdueLanes />
+                <p className="dl-body dl-body--small">
+                  At-risk tasks are ranked by how close they are and how much is left, and the insight panel suggests moving
+                  work from someone over capacity to someone with room, preferring shared skills.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="roles" className="dl-section dl-section--tint" aria-labelledby="roles-title">
+          <div className="dl-wrap">
+            <div className="dl-head dl-reveal">
+              <p className="dl-eyebrow">Roles and visibility</p>
+              <h2 id="roles-title" className="dl-h2">Same app. Each person sees their part of the org.</h2>
+              <p className="dl-sub">
+                Visibility follows the reporting tree, not job titles: a lead sees their whole subtree, however deep.
+                Department admins and read-only auditors get scoped grants instead of full admin.
+              </p>
+            </div>
+            <div className="dl-roles">
+              {ROLES.map((r) => (
+                <article key={r.persona} className="dl-role dl-reveal" aria-labelledby={`role-${r.persona}`}>
+                  <header className="dl-role__head">
+                    <span className="dl-role__tag">{r.persona === "manager" ? "Manager" : "Developer"}</span>
+                    <h3 id={`role-${r.persona}`} className="dl-h3">{r.who}</h3>
+                    <p>{r.title}</p>
+                  </header>
+                  <img className="dl-role__shot" src={r.shot} alt={r.alt} width={2000} height={1250} loading="lazy" decoding="async" />
+                  <div className="dl-role__lists">
+                    <div>
+                      <h4>Sees</h4>
+                      <ul>{r.sees.map((s) => <li key={s}>{s}</li>)}</ul>
+                    </div>
+                    <div>
+                      <h4>Does</h4>
+                      <ul>{r.does.map((s) => <li key={s}>{s}</li>)}</ul>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {DEMO_ENABLED && (
+          <section id="demo" className="dl-section dl-section--ink" aria-labelledby="demo-title">
+            <div className="dl-wrap dl-demo-sec">
+              <div className="dl-reveal">
+                <p className="dl-eyebrow">Built to be tried</p>
+                <h2 id="demo-title" className="dl-h2">A whole company to click around in, just for you.</h2>
+                <dl className="dl-facts">
+                  <div><dt>12</dt><dd>people across Platform, Mobile and Quality &amp; Ops</dd></div>
+                  <div><dt>25</dt><dd>tasks with epics, a sprint and subtasks</dd></div>
+                  <div><dt>24 h</dt><dd>then your private copy is deleted</dd></div>
+                  <div><dt>Off</dt><dd>emails and notifications, so nobody gets pinged</dd></div>
+                </dl>
+                {signedIn ? (
+                  <RouterLink to={APP_HOME} className="dl-btn dl-btn--primary dl-btn--lg">Open app <ArrowRight size={18} aria-hidden="true" /></RouterLink>
+                ) : (
+                  <div className="dl-personas">
+                    <div className="dl-persona">
+                      <p><strong>Odile, CTO.</strong> Sees all 11 people below her and the team timeline.</p>
+                      <PersonaButton persona="manager" label="Explore as the manager" />
+                    </div>
+                    <div className="dl-persona">
+                      <p><strong>Mira, engineer.</strong> Sees her own work and picks up tasks.</p>
+                      <PersonaButton persona="developer" label="Explore as a developer" />
+                    </div>
+                  </div>
                 )}
-              </Stack>
-              <Card p={{ base: 3, md: 5 }}>
-                <Flex justify="space-between" align="center" mb={3}>
-                  <Text fontSize="sm" fontWeight={700} color="neutral.800">Today, Platform and Mobile</Text>
-                  <Badge colorScheme="gray" variant="subtle" borderRadius="full">Sample day</Badge>
-                </Flex>
-                <MiniTimeline sample={sample} />
-              </Card>
-            </SimpleGrid>
-          </Container>
-        </Box>
+              </div>
+              <div className="dl-phones dl-reveal" aria-hidden="true">
+                <img src="/landing/mobile-my-work.webp" alt="" width={780} height={1688} loading="lazy" decoding="async" />
+                <img src="/landing/mobile-pending.webp" alt="" width={780} height={1688} loading="lazy" decoding="async" />
+              </div>
+            </div>
+          </section>
+        )}
 
-        <Section id="timeline" eyebrow="The live day timeline" title="One row per person, one bar per stretch of real work.">
-          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
-            <Card>
-              <Heading as="h3" size="sm" mb={2}>Built from sessions</Heading>
-              <Text color="neutral.600" fontSize="sm">Bars come from actual pick and hold events, so the timeline shows what happened, not what was planned.</Text>
-            </Card>
-            <Card>
-              <Heading as="h3" size="sm" mb={2}>Colored by priority</Heading>
-              <Text color="neutral.600" fontSize="sm">P0 to P4 at a glance. Dashed bars are tasks on hold, waiting to be resumed.</Text>
-            </Card>
-            <Card>
-              <Heading as="h3" size="sm" mb={2}>Your timezone, your hours</Heading>
-              <Text color="neutral.600" fontSize="sm">Days are cut by the business timezone and each person&apos;s own timezone, inside working hours.</Text>
-            </Card>
-          </SimpleGrid>
-        </Section>
-
-        <Box bg="white" borderTopWidth="1px" borderBottomWidth="1px" borderColor="neutral.200">
-          <Section id="flow" eyebrow="How a task moves" title="Four actions. Time tracking takes care of itself.">
-            <SimpleGrid as="ol" listStyleType="none" columns={{ base: 1, sm: 2, lg: 4 }} spacing={4}>
-              {STEPS.map((step, i) => (
-                <Card as="li" key={step.title} bg="surface.page">
-                  <Flex align="center" gap={3} mb={3}>
-                    <Flex w="36px" h="36px" borderRadius="lg" bg="brand.50" color="brand.600" align="center" justify="center">
-                      <Icon as={step.icon} boxSize={4} />
-                    </Flex>
-                    <Text fontSize="xs" color="neutral.600" fontWeight={600}>Step {i + 1}</Text>
-                  </Flex>
-                  <Heading as="h3" size="sm" mb={1}>{step.title}</Heading>
-                  <Text color="neutral.600" fontSize="sm">{step.body}</Text>
-                </Card>
+        <section id="engineering" className="dl-section" aria-labelledby="eng-title">
+          <div className="dl-wrap">
+            <div className="dl-head dl-reveal">
+              <p className="dl-eyebrow">Under the hood</p>
+              <h2 id="eng-title" className="dl-h2">Small stack, real constraints.</h2>
+              <p className="dl-sub">
+                React 19, TypeScript, Vite, Chakra UI and RTK Query in front. FastAPI, SQLAlchemy and Postgres behind.
+              </p>
+            </div>
+            <dl className="dl-eng dl-reveal">
+              {ENGINEERING.map((e) => (
+                <div key={e.k} className="dl-eng__item">
+                  <dt><span className="dl-eng__k">{e.k}</span>{e.t}</dt>
+                  <dd>{e.d}</dd>
+                </div>
               ))}
-            </SimpleGrid>
-            <Text mt={6} fontSize="sm" color="neutral.600" maxW="3xl">
-              A session left running past the end of the day is held automatically, and work that slips past its due date
-              moves back to the backlog, so the board stays honest without anyone policing it.
-            </Text>
-          </Section>
-        </Box>
+            </dl>
+            <a className="dl-textlink dl-reveal" href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
+              <FaGithub size={18} aria-hidden="true" /> Read the source on GitHub <ArrowRight size={16} aria-hidden="true" />
+            </a>
+          </div>
+        </section>
 
-        <Section id="insight" eyebrow="Capacity and overdue insight" title="Know who is overloaded before the deadline does.">
-          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-            <Card>
-              <Flex align="center" gap={2} mb={3}>
-                <Icon as={Gauge} color="brand.600" />
-                <Heading as="h3" size="sm">Capacity per person</Heading>
-              </Flex>
-              <Text color="neutral.600" fontSize="sm" mb={4}>
-                Logged time plus unstarted work, spread over the coming days against the business day.
-              </Text>
-              <Stack spacing={2}>
-                {[
-                  { label: "Available", note: "under 70%", color: "green.400", w: "45%" },
-                  { label: "At capacity", note: "70 to 100%", color: "orange.300", w: "85%" },
-                  { label: "Over capacity", note: "over 100%", color: "red.400", w: "100%" },
-                ].map((row) => (
-                  <Box key={row.label}>
-                    <Flex justify="space-between" fontSize="xs" color="neutral.600" mb={1}>
-                      <Text fontWeight={600}>{row.label}</Text>
-                      <Text>{row.note}</Text>
-                    </Flex>
-                    <Box h="8px" bg="neutral.100" borderRadius="full">
-                      <Box h="full" w={row.w} bg={row.color} borderRadius="full" />
-                    </Box>
-                  </Box>
-                ))}
-              </Stack>
-            </Card>
-            <Card>
-              <Heading as="h3" size="sm" mb={3}>What the insight panel tells you</Heading>
-              <List spacing={3} fontSize="sm" color="neutral.700">
-                {[
-                  "Tasks at risk of missing their due date, ranked by how close and how much is left.",
-                  "Suggested rebalancing: who is over capacity and who has room, preferring shared skills.",
-                  "Assignee suggestions when creating a task, based on skills, load and priority.",
-                  "An optional AI summary of the week when a model key is configured.",
-                ].map((line) => (
-                  <ListItem key={line} display="flex" gap={2}>
-                    <ListIcon as={Check} color="brand.600" mt={1} />
-                    <Text>{line}</Text>
-                  </ListItem>
-                ))}
-              </List>
-            </Card>
-          </SimpleGrid>
-        </Section>
-
-        <Box bg="white" borderTopWidth="1px" borderBottomWidth="1px" borderColor="neutral.200">
-          <Section id="roles" eyebrow="Roles and visibility" title="People see their part of the org chart, and nothing else.">
-            <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
-              {ROLES.map((role) => (
-                <Card key={role.who} bg="surface.page">
-                  <Flex align="center" gap={2} mb={1}>
-                    <Icon as={ShieldCheck} color="brand.600" />
-                    <Heading as="h3" size="sm">{role.who}</Heading>
-                  </Flex>
-                  <Text color="neutral.600" fontSize="sm">{role.sees}</Text>
-                </Card>
-              ))}
-            </SimpleGrid>
-          </Section>
-        </Box>
-
-        <Box py={{ base: 12, md: 16 }}>
-          <Container maxW="3xl" px={{ base: 4, md: 8 }} textAlign="center">
-            <Heading as="h2" fontSize={{ base: "2xl", md: "3xl" }} mb={3}>Ready to see a real day?</Heading>
-            <Text color="neutral.600" mb={6}>
+        <section className="dl-band" aria-labelledby="band-title">
+          <div className="dl-wrap dl-band__in">
+            <h2 id="band-title" className="dl-h2">See a real day in Dayline.</h2>
+            <p className="dl-sub">
               {DEMO_ENABLED && !signedIn
-                ? "The demo gives you a private copy of a sample company. Nothing to install, nothing to sign up for."
+                ? "Open the demo and pick up a task. It takes a few seconds."
                 : "Sign in to open your team's timeline."}
-            </Text>
-            <Flex justify="center">
-              {primary ?? (DEMO_ENABLED ? (
-                <Box w="full" maxW="280px"><DemoLauncher /></Box>
-              ) : (
-                <Button as={RouterLink} to="/login" size="lg" bg={BRAND_GRADIENT} color="white" _hover={{ opacity: 0.92 }}>
-                  Sign in
-                </Button>
-              ))}
-            </Flex>
-          </Container>
-        </Box>
-      </Box>
+            </p>
+            {ctas("band")}
+          </div>
+        </section>
+      </main>
 
-      <Box as="footer" borderTopWidth="1px" borderColor="neutral.200" bg="white">
-        <Container maxW="6xl" px={{ base: 4, md: 8 }} py={6}>
-          <Flex direction={{ base: "column", sm: "row" }} gap={3} justify="space-between" align={{ base: "flex-start", sm: "center" }} fontSize="sm" color="neutral.600">
-            <Text>
-              Built by{" "}
-              <Link href={PORTFOLIO_URL} color="brand.600" fontWeight={600} isExternal>
-                Atif Moin
-              </Link>
-            </Text>
-            <Link href={GITHUB_URL} color="brand.600" fontWeight={600} isExternal>
-              Source on GitHub
-            </Link>
-          </Flex>
-        </Container>
-      </Box>
-    </Box>
+      <footer className="dl-footer">
+        <div className="dl-wrap dl-footer__in">
+          <Logo />
+          <p>
+            Built by{" "}
+            <a href={PORTFOLIO_URL} target="_blank" rel="noopener noreferrer">Atif Moin</a>
+          </p>
+          <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">Source on GitHub</a>
+        </div>
+      </footer>
+    </div>
   );
 };
 
