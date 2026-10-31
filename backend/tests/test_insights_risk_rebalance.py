@@ -140,10 +140,9 @@ def test_at_risk_and_rebalance_populate_when_gemini_unconfigured(client, org, au
     assert r.status_code == 200, r.text
     data = r.json()["data"]
 
-    # Gemini itself is unavailable...
-    assert data["available"] is False
-    assert data["summary"] is None
-    assert data["recommendations"] == []
+    # Gemini itself is unavailable, so the summary comes from the rules fallback...
+    assert data["source"] == "rules"
+    assert data["summary"]
     # ...but the deterministic structures are still real, populated data.
     assert len(data["at_risk_tasks"]) >= 1
     assert any(t["task_id"] == "UNCONF-RISK" for t in data["at_risk_tasks"])

@@ -3222,14 +3222,90 @@ def _build_insights_prompt(summary_payload: dict) -> str:
     )
 
 
-def _unavailable_insight(
-    reason: str, scope_employee_count: int, at_risk_tasks: list, rebalance_suggestions: list
+def _plural(n: int, word: str) -> str:
+    return f"{n} {word}" if n == 1 else f"{n} {word}s"
+
+
+def _names(names: list) -> str:
+    names = [n for n in names if n]
+    if len(names) <= 2:
+        return " and ".join(names)
+    return f"{', '.join(names[:2])} and {len(names) - 2} more"
+
+
+def _rules_insight_text(
+    scope_employee_count: int, overdue_count: int, tasks_by_status: dict,
+    capacity_rows: list, at_risk_tasks: list, rebalance_suggestions: list,
+    due_soon: list | None = None,
+) -> tuple[str, list]:
+    """Deterministic summary + 2-4 recommendations built from the same data the Gemini prompt
+    gets. Used whenever Gemini is not configured or fails, so the panel always says something
+    useful and never surfaces an API error."""
+    def count(*statuses):
+        return sum(tasks_by_status.get(s, 0) for s in statuses)
+
+    in_progress = count("in-progress", "In-Progress", "in progress")
+    on_hold = count("on-hold", "On-Hold", "on hold")
+    done = count("done", "completed", "Done", "Completed")
+    todo = count("todo", "To Do", "to-do")
+    over = [r["emp_name"] or r["emp_id"] for r in capacity_rows if r["status"] == "over_capacitated"]
+    free = [r["emp_name"] or r["emp_id"] for r in capacity_rows if r["status"] == "available"]
+    high_risk = [t for t in at_risk_tasks if t["risk_level"] == "high"]
+
+    who = "You have" if scope_employee_count <= 1 else f"Across {scope_employee_count} people, there are"
+    summary = (
+        f"{who} {in_progress} in progress, {todo} to do, {on_hold} on hold and {done} done; "
+        f"{overdue_count} overdue."
+    )
+    if over:
+        summary += f" {_names(over)} {'is' if len(over) == 1 else 'are'} over capacity."
+    elif at_risk_tasks:
+        summary += f" {_plural(len(at_risk_tasks), 'task')} may slip past the due date."
+    else:
+        summary += " Workload looks balanced."
+
+    recs = []
+    if overdue_count:
+        recs.append(f"Re-plan the {_plural(overdue_count, 'overdue task')}: move the due date, split it or hand it off.")
+    # Overdue work already has its own recommendation above.
+    not_overdue = [t for t in (high_risk or at_risk_tasks) if "past its due date" not in t["reason"]]
+    for t in not_overdue[:1]:
+        recs.append(f"Check in on \"{t['task_name']}\": {t['reason']}")
+    for s in rebalance_suggestions[:1]:
+        recs.append(s["reason"])
+    if over and not rebalance_suggestions:
+        recs.append(f"{_names(over)} {'is' if len(over) == 1 else 'are'} over capacity; defer lower-priority work.")
+    for name, label in (due_soon or [])[:1]:
+        recs.append(f"Next up: \"{name}\" is due {label}.")
+    if on_hold:
+        recs.append(f"Unblock the {_plural(on_hold, 'on-hold task')} or move {'it' if on_hold == 1 else 'them'} back to the backlog.")
+    if free and scope_employee_count > 1:
+        recs.append(f"{_names(free)} {'has' if len(free) == 1 else 'have'} room for more work.")
+    for filler in (
+        "Keep a timer running on active work so capacity and reports stay accurate.",
+        "Review what is due in the next two days and confirm owners.",
+    ):
+        if len(recs) >= 2:
+            break
+        recs.append(filler)
+    return summary, recs[:4]
+
+
+def _rules_insight(
+    scope_employee_count: int, overdue_count: int, tasks_by_status: dict,
+    capacity_rows: list, at_risk_tasks: list, rebalance_suggestions: list,
+    due_soon: list | None = None,
 ) -> dict:
+    summary, recommendations = _rules_insight_text(
+        scope_employee_count, overdue_count, tasks_by_status, capacity_rows,
+        at_risk_tasks, rebalance_suggestions, due_soon,
+    )
     return {
-        "available": False,
-        "summary": None,
-        "recommendations": [],
-        "reason": reason,
+        "available": True,
+        "source": "rules",
+        "summary": summary,
+        "recommendations": recommendations,
+        "reason": None,
         "generated_at": get_utc_now_iso(),
         "scope_employee_count": scope_employee_count,
         # Deterministic — populated regardless of Gemini's own availability; see the module
@@ -3319,12 +3395,23 @@ def get_insights(db=Depends(get_db), current_user=Depends(verify_token)):
     # --- Deterministic rebalance pass (NO Gemini) — see _rebalance_suggestions. -----------
     rebalance_suggestions = _rebalance_suggestions(capacity_rows, users_by_id)
 
-    if not gemini_configured():
-        data = _unavailable_insight(
-            "AI insight not configured (no GEMINI_API_KEY set).",
-            len(employees), at_risk_tasks, rebalance_suggestions,
+    def rules():
+        # Open work due today or tomorrow (business tz), soonest first, for the "next up" tip.
+        due_soon = []
+        for t in sorted(open_scope_tasks, key=lambda t: (parse_dt(t.task_due_date) or now_dt, t.id)):
+            due = parse_dt(t.task_due_date)
+            if due is None or due < now_dt:
+                continue
+            days = (due.astimezone(ZoneInfo(BUSINESS_TZ)).date() - today_date).days
+            if days <= 1:
+                due_soon.append((t.task_name, "today" if days <= 0 else "tomorrow"))
+        return _rules_insight(
+            len(employees), overdue_count, tasks_by_status, capacity_rows,
+            at_risk_tasks, rebalance_suggestions, due_soon,
         )
-        return response(status.HTTP_200_OK, message="AI insight not configured", data=data)
+
+    if not gemini_configured():
+        return response(status.HTTP_200_OK, message="Rules-based insight (AI not configured)", data=rules())
 
     summary_payload = {
         "scope_employee_count": len(employees),
@@ -3353,6 +3440,7 @@ def get_insights(db=Depends(get_db), current_user=Depends(verify_token)):
     if parsed:
         data = {
             "available": True,
+            "source": "ai",
             "summary": parsed["summary"],
             "recommendations": parsed["recommendations"],
             "reason": None,
@@ -3363,12 +3451,13 @@ def get_insights(db=Depends(get_db), current_user=Depends(verify_token)):
         }
         message = "AI insight generated successfully"
     else:
-        reason = (
-            result["reason"] if not result.get("success")
-            else "Gemini returned a response that couldn't be parsed as the expected insight format."
+        # Log the cause for operators; users get the rules-based insight, never the raw error.
+        logger.warning(
+            "AI insight fell back to rules: %s",
+            result.get("reason") if not result.get("success") else "unparseable Gemini response",
         )
-        data = _unavailable_insight(reason, len(employees), at_risk_tasks, rebalance_suggestions)
-        message = "AI insight generation failed"
+        data = rules()
+        message = "Rules-based insight (AI unavailable)"
 
     redis_set_value(cache_key, json.dumps(data), expiration=INSIGHTS_CACHE_TTL_SECONDS)
     return response(status.HTTP_200_OK, message=message, data=data)

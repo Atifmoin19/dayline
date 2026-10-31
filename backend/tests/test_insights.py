@@ -70,18 +70,46 @@ def test_insights_requires_auth(client, org):
     assert r.status_code == 401
 
 
-def test_insights_unconfigured_returns_available_false(client, org, auth_as):
-    """No GEMINI_API_KEY(_2/_3) at all (conftest blanks them) -> a clear, structured
-    "not configured" response, still HTTP 200 — never a 500 for an optional integration."""
+def assert_rules_insight(data):
+    """The deterministic fallback: a real summary and 2-4 recommendations, never an error."""
+    assert data["available"] is True
+    assert data["source"] == "rules"
+    assert data["reason"] is None
+    assert isinstance(data["summary"], str) and data["summary"]
+    assert 2 <= len(data["recommendations"]) <= 4
+    assert all(isinstance(r, str) and r for r in data["recommendations"])
+    assert "generated_at" in data
+
+
+def test_insights_unconfigured_falls_back_to_rules(client, org, auth_as):
+    """No GEMINI_API_KEY(_2/_3) at all (conftest blanks them) -> a rules-based insight,
+    still HTTP 200 — never a 500 or an error for an optional integration."""
     r = client.get("/insights", headers=auth_as("SE001"))
     assert r.status_code == 200, r.text
     data = r.json()["data"]
-    assert data["available"] is False
-    assert data["summary"] is None
-    assert data["recommendations"] == []
-    assert "not configured" in data["reason"].lower()
+    assert_rules_insight(data)
     assert data["scope_employee_count"] == 1
-    assert "generated_at" in data
+
+
+def test_rules_insight_is_deterministic_and_reflects_the_data(client, org, auth_as, db_session):
+    from datetime import timedelta
+    from models import Task
+    from task_helpers import utc_now
+    now = utc_now()
+    db_session.add(Task(
+        id="late-1", ticket_id="T-90001", task_name="Late thing", task_status="todo",
+        task_assigned_to="SE001", task_assigned_by="TL001", task_duration="01:00",
+        task_due_date=now - timedelta(days=1), task_assigned_date=now - timedelta(days=2),
+        time_spent=0.0, task_sessions=[], task_created_at=now - timedelta(days=3),
+    ))
+    db_session.commit()
+    h = auth_as("TL001")
+    first = client.get("/insights", headers=h).json()["data"]
+    second = client.get("/insights", headers=h).json()["data"]
+    assert_rules_insight(first)
+    assert (first["summary"], first["recommendations"]) == (second["summary"], second["recommendations"])
+    assert "1 overdue" in first["summary"]
+    assert any("overdue" in rec.lower() for rec in first["recommendations"])
 
 
 def test_insights_success_shape(client, org, auth_as, monkeypatch):
@@ -93,6 +121,7 @@ def test_insights_success_shape(client, org, auth_as, monkeypatch):
     assert r.status_code == 200, r.text
     data = r.json()["data"]
     assert data["available"] is True
+    assert data["source"] == "ai"
     assert data["reason"] is None
     assert isinstance(data["summary"], str) and data["summary"]
     assert isinstance(data["recommendations"], list)
@@ -122,8 +151,8 @@ def test_insights_falls_back_to_second_key_on_failure(client, org, auth_as, monk
     assert attempts == ["bad-key-1", "good-key-2"]
 
 
-def test_insights_all_keys_fail_returns_unavailable(client, org, auth_as, monkeypatch):
-    """Every configured key fails -> graceful available: false, never a 500."""
+def test_insights_all_keys_fail_falls_back_to_rules(client, org, auth_as, monkeypatch):
+    """Every configured key fails -> the rules-based insight, never a 500 or the raw error."""
     monkeypatch.setattr(gemini_util, "GEMINI_API_KEYS", ["k1", "k2", "k3"])
     attempts = []
 
@@ -136,10 +165,8 @@ def test_insights_all_keys_fail_returns_unavailable(client, org, auth_as, monkey
     r = client.get("/insights", headers=auth_as("SE001"))
     assert r.status_code == 200, r.text
     data = r.json()["data"]
-    assert data["available"] is False
-    assert data["summary"] is None
-    assert data["recommendations"] == []
-    assert "failed" in data["reason"].lower()
+    assert_rules_insight(data)
+    assert "boom" not in r.text  # raw API errors never reach the user
     assert attempts == ["k1", "k2", "k3"]  # all three were tried, in order
 
 
@@ -152,10 +179,7 @@ def test_insights_malformed_gemini_response_is_graceful(client, org, auth_as, mo
     r = client.get("/insights", headers=auth_as("SE001"))
     assert r.status_code == 200, r.text
     data = r.json()["data"]
-    assert data["available"] is False
-    assert data["summary"] is None
-    assert data["recommendations"] == []
-    assert data["reason"]
+    assert_rules_insight(data)
 
 
 def test_insights_scope_matches_org_subtree(client, org, auth_as, monkeypatch):
