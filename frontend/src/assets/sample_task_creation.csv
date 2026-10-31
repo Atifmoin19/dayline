@@ -1,0 +1,6 @@
+task_name,task_description,task_status,task_assigned_to,task_assigned_by,task_priority,task_tags,task_notes,task_duration,epic_id,row_ref,subtask_of
+Build login page,Implement auth screen,todo,EMP002,EMP001,P1,frontend,Use Chakra UI,02:00,,,
+Fix timeline bug,Blocks overlap on zoom,in-progress,EMP002,EMP001,P0,bug,Reproduce on 10-min zoom,01:30,,,
+Redesign onboarding flow,Story - collaborators added below via row_ref,todo,EMP002,EMP001,P2,onboarding,,04:00,,story1,
+Build onboarding backend,Subtask of the story above,todo,EMP001,EMP001,P2,onboarding,,02:00,,,story1
+Build onboarding UI,Subtask of the story above,todo,EMP002,EMP001,P2,onboarding,,02:00,,,story1

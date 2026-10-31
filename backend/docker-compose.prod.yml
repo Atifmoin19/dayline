@@ -1,0 +1,100 @@
+# PRODUCTION stack. Differences from docker-compose.yml (dev):
+#   - no bind mount (image is immutable — code changes require a rebuild)
+#   - no --reload (Dockerfile's default CMD)
+#   - no pgAdmin
+#   - no default/fallback secrets — every credential must come from a real .env
+#     (or your secret manager exporting the same var names) or the container
+#     refuses to start (`${VAR:?...}` compose syntax)
+#
+# Usage: docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+services:
+  taskboard_backend:
+    build: .
+    restart: unless-stopped
+    image: taskboard_backend_image
+    container_name: taskboard-backend
+    ports:
+      - "8052:8000"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:?set POSTGRES_USER in .env}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@taskboard_db:5432/${POSTGRES_DB:?set POSTGRES_DB in .env}
+      - REDIS_HOST=taskboard_redis
+      - REDIS_PORT=6379
+    depends_on:
+      - taskboard_db
+      - taskboard_redis
+    networks:
+      - taskboard_network
+
+  # Celery worker: runs tasks_celery.sweep_overdue_tasks (replaces the old in-process
+  # asyncio overdue loop). No bind mount, matching the rest of this file — image is
+  # immutable, code changes require a rebuild.
+  taskboard_celery_worker:
+    build: .
+    restart: unless-stopped
+    image: taskboard_backend_image
+    container_name: taskboard-celery-worker
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:?set POSTGRES_USER in .env}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@taskboard_db:5432/${POSTGRES_DB:?set POSTGRES_DB in .env}
+      - REDIS_HOST=taskboard_redis
+      - REDIS_PORT=6379
+    depends_on:
+      - taskboard_db
+      - taskboard_redis
+    networks:
+      - taskboard_network
+    command: celery -A celery_app.celery_app worker --loglevel=info
+
+  # Celery beat: fires sweep-overdue-tasks on the schedule in celery_app.py (default 60s).
+  # Kept as its own service (not folded into the worker) so scaling worker replicas never
+  # risks running beat — and therefore the schedule — more than once.
+  taskboard_celery_beat:
+    build: .
+    restart: unless-stopped
+    image: taskboard_backend_image
+    container_name: taskboard-celery-beat
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:?set POSTGRES_USER in .env}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@taskboard_db:5432/${POSTGRES_DB:?set POSTGRES_DB in .env}
+      - REDIS_HOST=taskboard_redis
+      - REDIS_PORT=6379
+    depends_on:
+      - taskboard_db
+      - taskboard_redis
+    networks:
+      - taskboard_network
+    command: celery -A celery_app.celery_app beat --loglevel=info
+
+  taskboard_db:
+    image: postgres:15
+    restart: unless-stopped
+    container_name: taskboard-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+    volumes:
+      - taskboard_pg_data:/var/lib/postgresql/data
+    networks:
+      - taskboard_network
+    # No host port mapping — only reachable from other containers on taskboard_network.
+
+  taskboard_redis:
+    image: redis:alpine
+    restart: unless-stopped
+    container_name: taskboard-redis
+    networks:
+      - taskboard_network
+    # No host port mapping — internal cache/coordination only, never reached from
+    # outside the network in prod (dev exposes 6327 for local debugging only).
+
+volumes:
+  taskboard_pg_data:
+
+networks:
+  taskboard_network:
+    driver: bridge

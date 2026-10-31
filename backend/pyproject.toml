@@ -1,0 +1,66 @@
+[tool.ruff]
+target-version = "py310"  # matches Dockerfile's python:3.10-slim, not the local dev venv
+
+[tool.ruff.lint]
+# Widened deliberately (2026-07-26) as a reviewed pass over the ~350 pre-existing findings
+# the original E9/F-only baseline left untriaged. Every finding under the categories below
+# was either fixed for real or suppressed with a `# noqa: <CODE> — <reason>` at the specific
+# line, matching this codebase's existing convention (see e.g. tasks_celery.py's load-bearing
+# `float()` cast). Categories NOT listed here (docstrings/D, type-annotation-coverage/ANN,
+# print/T20, assert/S101, copyright/CPY, magic-value/PLR2004, unused-arg/ARG001, etc. — the
+# bulk of `--select ALL`'s ~3200 findings) are out of scope for this pass: they require either
+# large-scale doc/annotation authoring or are noisy-by-design for this codebase's style, and
+# were never part of the original ~330 estimate this baseline was meant to close out.
+#
+#   E9, F          syntax errors + pyflakes (undefined names, unused imports/vars) — original
+#                  baseline, unchanged.
+#   UP006/7/45/35  modern type-hint syntax (`list[str]`, `X | None`) and stdlib import homes
+#                  (`collections.abc.Sequence`) — mechanical, auto-fixed, spot-checked.
+#   I001           import sorting — auto-fixed; each touched file's tests re-run to catch any
+#                  latent import-order/circular-import sensitivity (none found).
+#   PIE790         unnecessary `pass`/placeholder statements — auto-fixed.
+#   PLR1730        if-stmt reducible to min/max — auto-fixed (1 occurrence, tasks_celery.py).
+#   RUF010         `f"{str(x)}"` -> `f"{x!s}"` — auto-fixed, output-identical.
+#   RUF013         implicit `Optional` (`x: str = None` without `| None` in the annotation) —
+#                  fixed by hand, annotation-only (no runtime enforcement, so zero behavior
+#                  change); a handful of real cases in email_util.py/main.py/push_util.py/
+#                  redis_client.py.
+#   ISC004         implicit string concatenation inside a collection literal — the handful of
+#                  hits were intentionally line-wrapped SQL strings in migration/audit scripts;
+#                  wrapped in explicit parens per ruff's own suggested fix (cosmetic).
+#   PLW1508        non-str `os.getenv(..., default)` (e.g. `os.getenv("REDIS_PORT", 6379)`) —
+#                  genuine latent bug (env var override would silently become a str where an
+#                  int was expected downstream); fixed with `int(os.getenv(..., "6379"))`.
+#   S112            bare `try/except/continue` with no logging — fixed for real (added a
+#                  `logger.warning` in email_util.py's per-attachment loop) rather than
+#                  suppressed, since logging the skip is a genuine improvement there.
+#   BLE001         blind `except Exception`. Triaged occurrence-by-occurrence: narrowed to
+#                  `sqlalchemy.exc.SQLAlchemyError` where the try block is provably just a
+#                  `db.commit()`/`db.refresh()`; left as a documented, noqa'd blind catch where
+#                  the intent is genuinely "catch anything, degrade gracefully, never crash the
+#                  caller" (the notification fan-out, WebSocket best-effort send/disconnect,
+#                  Celery periodic sweep, one-off CLI/migration scripts that log-and-continue
+#                  past a bad row) — matching this codebase's documented unset/failed-integration
+#                  = silent-no-op philosophy.
+#   RUF100         unused `# noqa` comments — kept enabled as ongoing hygiene now that the
+#                  categories above are enforced (a noqa for a rule that isn't selected, or that
+#                  no longer fires, is dead weight).
+#
+# Excluded, with reason (not just "not gotten to yet"):
+#   B008  function-call-in-default-argument. Every hit (~75) is FastAPI's own idiomatic
+#         `Depends(...)` / `File(...)` dependency-injection pattern in main.py — ruff's B008
+#         doesn't know about FastAPI's DI system and flags it as a mutable-default-style bug.
+#         There is no real fix here without breaking the DI pattern FastAPI's own docs
+#         recommend; a false-positive category for this codebase, not real debt.
+select = [
+    "E9", "F",
+    "UP006", "UP007", "UP035", "UP045",
+    "I001",
+    "PIE790",
+    "PLR1730",
+    "RUF010", "RUF013", "RUF100",
+    "ISC004",
+    "PLW1508",
+    "S112",
+    "BLE001",
+]

@@ -1,0 +1,116 @@
+# DEV ONLY: bind-mounts source + auto-reloads + ships pgAdmin. See
+# docker-compose.prod.yml for the production stack (no bind mount, no --reload,
+# no pgAdmin, no baked-in credentials).
+services:
+  taskboard_backend:
+    build: .
+    restart: always
+    image: taskboard_backend_image
+    container_name: taskboard-backend
+    ports:
+      - "8052:8000"  # UPDATED: Using 8052 because 8051 is currently in use on your server
+    volumes:
+      - .:/app/
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@taskboard_db:5432/${POSTGRES_DB:-taskboard_db}
+      - REDIS_HOST=taskboard_redis
+      - REDIS_PORT=6379
+    depends_on:
+      - taskboard_db
+      - taskboard_redis
+    networks:
+      - taskboard_network
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Celery worker: runs tasks_celery.sweep_overdue_tasks (replaces the old in-process
+  # asyncio overdue loop). Same image/bind-mount as taskboard_backend so `--reload`-style
+  # dev iteration works without a rebuild — Celery itself doesn't auto-reload, so restart
+  # this service after changing tasks_celery.py/task_helpers.py.
+  taskboard_celery_worker:
+    build: .
+    restart: always
+    image: taskboard_backend_image
+    container_name: taskboard-celery-worker
+    volumes:
+      - .:/app/
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@taskboard_db:5432/${POSTGRES_DB:-taskboard_db}
+      - REDIS_HOST=taskboard_redis
+      - REDIS_PORT=6379
+    depends_on:
+      - taskboard_db
+      - taskboard_redis
+    networks:
+      - taskboard_network
+    command: celery -A celery_app.celery_app worker --loglevel=info
+
+  # Celery beat: fires sweep-overdue-tasks on the schedule in celery_app.py (default 60s,
+  # matching the old asyncio loop's `await asyncio.sleep(60)`). Separate from the worker so
+  # scaling worker concurrency never risks running beat (and therefore the schedule) more
+  # than once.
+  taskboard_celery_beat:
+    build: .
+    restart: always
+    image: taskboard_backend_image
+    container_name: taskboard-celery-beat
+    volumes:
+      - .:/app/
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@taskboard_db:5432/${POSTGRES_DB:-taskboard_db}
+      - REDIS_HOST=taskboard_redis
+      - REDIS_PORT=6379
+    depends_on:
+      - taskboard_db
+      - taskboard_redis
+    networks:
+      - taskboard_network
+    command: celery -A celery_app.celery_app beat --loglevel=info
+
+  taskboard_db:
+    image: postgres:15
+    restart: always
+    container_name: taskboard-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-taskboard_db}
+    volumes:
+      - taskboard_pg_data:/var/lib/postgresql/data
+    networks:
+      - taskboard_network
+
+  taskboard_redis:
+    image: redis:alpine
+    restart: always
+    container_name: taskboard-redis
+    ports:
+      - "6327:6379" # Using 6327 (checked and free)
+    networks:
+      - taskboard_network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: taskboard-pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:?set PGADMIN_DEFAULT_EMAIL in .env}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:?set PGADMIN_DEFAULT_PASSWORD in .env}
+    ports:
+      - "5055:80"
+    depends_on:
+      - taskboard_db
+    networks:
+      - taskboard_network
+
+volumes:
+  taskboard_pg_data:
+
+networks:
+  taskboard_network:
+    driver: bridge

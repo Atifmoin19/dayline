@@ -1,0 +1,3 @@
+emp_name,emp_id,emp_email,emp_phone,emp_designation,emp_department,manager_id,company,work_location,date_of_joining,date_of_birth,blood_group,gender,education,linkedin,password
+Jane Doe,EMP001,jane.doe@example.com,555-0100,Tech Lead,Engineering,,Example Corp,Remote,01-04-2022,,,,Bachelor's Degree,https://linkedin.com/in/example,ChangeMe123!
+Sample Dev,EMP002,sample.dev@example.com,555-0101,Software Engineer,Engineering,EMP001,Example Corp,Remote,15-06-2023,,,,Bachelor's Degree;Master's Degree,,ChangeMe123!

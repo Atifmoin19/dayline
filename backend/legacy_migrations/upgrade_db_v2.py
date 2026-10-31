@@ -1,0 +1,24 @@
+from sqlalchemy import text
+
+from models import engine
+
+
+def upgrade_tasks_table():
+    # Use engine.begin() to ensure the transaction is committed
+    with engine.begin() as connection:
+        try:
+            # Add time_spent column
+            connection.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS time_spent FLOAT DEFAULT 0.0"))
+            print("Added time_spent column.")
+        except Exception as e:  # noqa: BLE001 — one-off migration script: column may already exist, log and continue
+            print(f"Could not add time_spent: {e}")
+
+        try:
+            # Add completed_at column
+            connection.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS completed_at VARCHAR(32)"))
+            print("Added completed_at column.")
+        except Exception as e:  # noqa: BLE001 — one-off migration script: column may already exist, log and continue
+            print(f"Could not add completed_at: {e}")
+
+if __name__ == "__main__":
+    upgrade_tasks_table()

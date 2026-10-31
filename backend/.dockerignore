@@ -1,0 +1,18 @@
+# Never bake secrets or dev cruft into the image — `COPY . /app/` in the Dockerfile
+# would otherwise include all of this in a built layer (recoverable from image
+# history even if later deleted from a subsequent layer).
+.env
+*.env
+.git
+.venv
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+tests/
+*.db
+*.sqlite3
+dump.rdb
+*.log
+.DS_Store

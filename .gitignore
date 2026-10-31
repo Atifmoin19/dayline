@@ -1,0 +1,49 @@
+# Environment files (keep the committed examples)
+.env
+.env.*
+*.env
+!.env.example
+!**/.env.example
+
+# Databases and data dumps
+*.db
+*.sqlite
+*.sqlite3
+dump.rdb
+celerybeat-schedule*
+
+# CSV data (real exports never belong here); allow fictional samples/seed only
+*.csv
+!frontend/src/assets/sample_*.csv
+!backend/seed/*.csv
+
+# Archives
+*.tar.gz
+*.tgz
+*.zip
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node / build output
+node_modules/
+dist/
+build/
+dist-ssr/
+*.tsbuildinfo
+*.local
+
+# Logs, editor, OS
+*.log
+logs/
+.vscode/
+.idea/
+.DS_Store
+*.swp
