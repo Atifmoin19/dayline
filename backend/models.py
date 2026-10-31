@@ -462,6 +462,8 @@ def resolve_database_url(env=None) -> str:
             SQLITE_FALLBACK_URL,
         )
         return SQLITE_FALLBACK_URL
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://"):]
     if is_production and url.startswith("sqlite"):
         raise RuntimeError("SQLite is not supported when ENVIRONMENT=production; set DATABASE_URL to Postgres.")
     return url
@@ -475,11 +477,15 @@ DATABASE_URL = resolve_database_url()
 # affects the SQLite fallback (e.g. local dev / the test suite); Postgres is unaffected.
 _connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
+# pool_pre_ping/pool_recycle: serverless Postgres (e.g. Neon) closes idle connections, and a
+# free web service that slept would otherwise hand out dead pooled connections on wake.
+_pool_args = {} if DATABASE_URL.startswith("sqlite") else {"pool_pre_ping": True, "pool_recycle": 300}
 engine = create_engine(
     DATABASE_URL,
     echo=False,
     future=True,
     connect_args=_connect_args,
+    **_pool_args,
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

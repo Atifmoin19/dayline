@@ -146,7 +146,7 @@ from slack_util import send_slack, slack_configured
 # A reverse proxy typically maps https://<host>/api/ -> this app (prefix stripped),
 # so root_path keeps the OpenAPI/docs server URL correct behind the proxy.
 app = FastAPI(
-    root_path=os.getenv("API_ROOT_PATH", "/api"),
+    root_path=os.getenv("API_ROOT_PATH", "/api").rstrip("/"),  # "/" or "" = served at the root
     title="Dayline API",
     description=(
         "Role-based task/time-tracking backend: auth + sessions, task CRUD with an "
@@ -624,11 +624,13 @@ import hashlib
 import json
 import threading
 
+import scheduler
 from gemini_util import call_gemini_with_fallback, gemini_configured
 from redis_client import (
     WS_BROADCAST_CHANNEL,
     get_redis_client,
     redis_available,
+    redis_configured,
     session_delete,
     session_get,
     session_set,
@@ -640,35 +642,48 @@ from redis_client import (
     set_value as redis_set_value,
 )
 
+_scheduled_jobs: list = []
+
 
 @app.on_event("startup")
 async def on_startup():
     # Initialize Postgres tables
     init_db()
 
-    # Verify Redis Connection
-    redis_conn = get_redis_client()
-    if redis_conn:
-        logger.info("Redis connected successfully")
+    if redis_configured():
+        if get_redis_client():
+            logger.info("Redis connected successfully")
+        else:
+            logger.warning("Redis connection failed; sessions fall back to the database")
     else:
-        logger.warning("Redis connection failed")
+        logger.info("Redis not configured: database-backed sessions, in-process WebSocket fan-out")
 
     # Capture the running loop so sync endpoints (and the Redis pub/sub listener thread
     # started below) can push WebSocket broadcasts onto it.
     global _main_loop
     _main_loop = asyncio.get_running_loop()
 
-    # The overdue sweeper used to be an in-process asyncio task started right here
-    # (`asyncio.create_task(check_overdue_tasks())`, `while True: await asyncio.sleep(60)`).
-    # It now runs as tasks_celery.sweep_overdue_tasks, scheduled every 60s by Celery Beat in
-    # a separate worker process — see celery_app.py / tasks_celery.py. Do NOT re-add a call
-    # here: running both would double-process the sweep (double-holding sessions, duplicate
-    # backlog moves, duplicate notifications).
+    # Periodic jobs (overdue sweep, demo purge): either Celery Beat in separate processes
+    # (CELERY_ENABLED=true) or this process (default, for single-process hosts). Never both,
+    # or the sweep would double-hold sessions and double-notify.
+    if scheduler.celery_enabled():
+        logger.info("CELERY_ENABLED=true: periodic jobs run under Celery Beat")
+    else:
+        _scheduled_jobs[:] = scheduler.start_background_jobs()
+        logger.info("Periodic jobs scheduled in-process: %s", [t.get_name() for t in _scheduled_jobs])
 
-    # That move means the sweep now runs OUTSIDE this process, so it can no longer call
-    # ws_manager.broadcast directly. Bridge the gap via Redis pub/sub (see
-    # redis_client.publish_ws_event / WS_BROADCAST_CHANNEL and _ws_redis_listener below).
-    threading.Thread(target=_ws_redis_listener, daemon=True, name="ws-redis-listener").start()
+    # Celery workers run outside this process and publish WebSocket events over Redis
+    # pub/sub; bridge them onto this process's sockets (see _ws_redis_listener below).
+    if redis_configured():
+        threading.Thread(target=_ws_redis_listener, daemon=True, name="ws-redis-listener").start()
+
+
+@app.on_event("shutdown")
+async def on_shutdown():
+    for task in _scheduled_jobs:
+        task.cancel()
+    await asyncio.gather(*_scheduled_jobs, return_exceptions=True)
+    _scheduled_jobs.clear()
 
 
 # ── Real-time (WebSocket) ────────────────────────────────────────────────────

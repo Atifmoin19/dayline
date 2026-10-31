@@ -27,3 +27,9 @@ def test_sqlite_refused_in_production(env):
 def test_postgres_allowed_in_production():
     url = "postgresql://u:p@db:5432/taskboard"
     assert resolve_database_url({"DATABASE_URL": url, "ENVIRONMENT": "Production"}) == url
+
+
+def test_postgres_scheme_alias_is_normalised():
+    """Some hosts (Neon, Heroku-style) hand out postgres://, which SQLAlchemy 2 rejects."""
+    url = "postgres://u:p@ep-x.neon.tech/db?sslmode=require"
+    assert resolve_database_url({"DATABASE_URL": url}) == "postgresql://u:p@ep-x.neon.tech/db?sslmode=require"

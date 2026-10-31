@@ -1,0 +1,38 @@
+# Render Blueprint: the Dayline API as ONE free web service (no workers, no Redis, no paid
+# add-ons). Periodic jobs run in-process (CELERY_ENABLED=false), sessions live in Postgres,
+# and Postgres itself is external (Neon). Step-by-step guide: docs/DEPLOY_RENDER.md
+services:
+  - type: web
+    name: dayline-api
+    runtime: python
+    plan: free
+    branch: master
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.2
+      # Neon connection string, e.g. postgresql://user:pass@ep-xxx.region.aws.neon.tech/dayline?sslmode=require
+      - key: DATABASE_URL
+        sync: false
+      # The Vercel frontend origin, e.g. https://dayline.vercel.app (comma-separate several)
+      - key: FRONTEND_ORIGIN
+        sync: false
+      # Same frontend URL; used for links in emails and push notifications
+      - key: FRONTEND_APP_URL
+        sync: false
+      # Salt for the hashed client IP behind the demo's per-IP limit
+      - key: DEMO_IP_SALT
+        generateValue: true
+      - key: DEMO_MODE_ENABLED
+        value: "true"
+      - key: CELERY_ENABLED
+        value: "false"
+      - key: ENVIRONMENT
+        value: production
+      # Serve the API at the service root ("/" is normalised to no prefix)
+      - key: API_ROOT_PATH
+        value: /

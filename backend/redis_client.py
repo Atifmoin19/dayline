@@ -24,25 +24,43 @@ _SESSION_PREFIX = "session:"
 _client: Optional["redis.Redis"] = None
 
 
-def get_redis_client():
-    """Return a cached Redis client, or None if Redis is unavailable."""
-    global _client
-    if _client is not None:
-        return _client
+def redis_configured() -> bool:
+    """Redis is optional. It is used only when REDIS_URL (or the older REDIS_HOST) is set;
+    otherwise sessions live in the database and WebSocket fan-out stays in-process."""
+    return bool(os.getenv("REDIS_URL", "").strip() or os.getenv("REDIS_HOST", "").strip())
+
+
+def _build_client():
+    """Connect + PING, or None when Redis is not configured or unreachable."""
+    if not redis_configured():
+        return None
+    url = os.getenv("REDIS_URL", "").strip()
     try:
-        r = redis.Redis(
-            host=REDIS_HOST,
-            port=REDIS_PORT,
-            db=REDIS_DB,
-            password=REDIS_PASSWORD,
-            decode_responses=True,  # String responses instead of bytes
-        )
+        if url:
+            r = redis.from_url(url, decode_responses=True, socket_connect_timeout=3)
+        else:
+            r = redis.Redis(
+                host=REDIS_HOST,
+                port=REDIS_PORT,
+                db=REDIS_DB,
+                password=REDIS_PASSWORD,
+                decode_responses=True,  # String responses instead of bytes
+                socket_connect_timeout=3,
+            )
         r.ping()  # Test connection
-        _client = r
-        return _client
+        return r
     except redis.RedisError as e:
         logger.warning("Error connecting to Redis: %s", e)
         return None
+
+
+def get_redis_client():
+    """Return a cached Redis client, or None if Redis is not configured or unavailable."""
+    global _client
+    if _client is not None:
+        return _client
+    _client = _build_client()
+    return _client
 
 
 def set_value(key: str, value: str, expiration: int | None = None):

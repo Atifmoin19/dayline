@@ -38,6 +38,8 @@ REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", None)
 
 
 def _default_redis_url() -> str:
+    if os.getenv("REDIS_URL", "").strip():
+        return os.getenv("REDIS_URL", "").strip()
     auth = f":{REDIS_PASSWORD}@" if REDIS_PASSWORD else ""
     return f"redis://{auth}{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB_CELERY}"
 

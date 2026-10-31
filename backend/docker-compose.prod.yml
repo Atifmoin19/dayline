@@ -21,6 +21,7 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER:?set POSTGRES_USER in .env}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@taskboard_db:5432/${POSTGRES_DB:?set POSTGRES_DB in .env}
       - REDIS_HOST=taskboard_redis
       - REDIS_PORT=6379
+      - CELERY_ENABLED=true
     depends_on:
       - taskboard_db
       - taskboard_redis
@@ -41,6 +42,7 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER:?set POSTGRES_USER in .env}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@taskboard_db:5432/${POSTGRES_DB:?set POSTGRES_DB in .env}
       - REDIS_HOST=taskboard_redis
       - REDIS_PORT=6379
+      - CELERY_ENABLED=true
     depends_on:
       - taskboard_db
       - taskboard_redis
@@ -62,6 +64,7 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER:?set POSTGRES_USER in .env}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@taskboard_db:5432/${POSTGRES_DB:?set POSTGRES_DB in .env}
       - REDIS_HOST=taskboard_redis
       - REDIS_PORT=6379
+      - CELERY_ENABLED=true
     depends_on:
       - taskboard_db
       - taskboard_redis
