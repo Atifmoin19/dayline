@@ -71,8 +71,18 @@ describe("Landing", () => {
     renderLanding();
     expect(screen.getAllByRole("button", { name: "Try the demo" }).length).toBeGreaterThan(0);
     expect(screen.getByRole("heading", { name: /whole company/ })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Explore as the manager/ })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Explore as a developer/ })).toBeTruthy();
+    for (const name of ["Manager", "Team lead", "Employee 1", "Employee 2"]) {
+      expect(screen.getByRole("button", { name: `Explore as ${name}` })).toBeTruthy();
+    }
+  });
+
+  it("points visitors who want Dayline for real at Request a workspace, not signup", () => {
+    flags.demo = true;
+    const { container } = renderLanding();
+    const links = screen.getAllByRole("link", { name: /Request a workspace/ });
+    expect(links.length).toBeGreaterThan(0);
+    for (const l of links) expect(l.getAttribute("href")).toBe("/request-workspace");
+    expect(container.querySelector('a[href^="/onboarding"]')).toBeNull();
   });
 
   it("gives signed-in visitors an Open app button to /app", () => {

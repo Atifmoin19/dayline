@@ -12,6 +12,7 @@ import { useScrollReveal } from "Components/Landing/hooks";
 import { useDemoLaunch } from "hooks/useDemoLaunch";
 import { APP_HOME, DEMO_ENABLED, GITHUB_URL, PORTFOLIO_URL } from "Utils/constants";
 import { DemoPersona } from "types";
+import { DEMO_PERSONAS } from "Utils/demoPersonas";
 import "./landing.css";
 
 const Logo = () => (
@@ -36,11 +37,11 @@ const ROLES: { persona: DemoPersona; who: string; title: string; shot: string; a
     does: ["Assigns and reprioritises work", "Runs epics, the roadmap and sprints", "Manages people and roles, with an audit log (admin only, off in the demo)"],
   },
   {
-    persona: "developer",
+    persona: "employee_1",
     who: "Mira Okafor",
     title: "Senior Software Engineer",
     shot: "/landing/my-work-developer.webp",
-    alt: "The developer's My Work: her own in-progress, pending and completed counts, time logged, and her own schedule.",
+    alt: "An engineer's My Work: her own in-progress, pending and completed counts, time logged, and her own schedule.",
     sees: [
       "Her own tasks, timeline, week and calendar",
       "The org chart with her line: Wren, then Kasimir, then Odile",
@@ -92,8 +93,8 @@ const Landing = () => {
             <DemoLauncher tone="solid" />
           </div>
         )}
-        <RouterLink to="/login" className={`dl-btn dl-btn--lg ${DEMO_ENABLED ? "dl-btn--outline" : "dl-btn--primary"}`}>
-          Sign in
+        <RouterLink to="/request-workspace" className={`dl-btn dl-btn--lg ${DEMO_ENABLED ? "dl-btn--outline" : "dl-btn--primary"}`}>
+          Request a workspace
         </RouterLink>
       </div>
     );
@@ -172,7 +173,7 @@ const Landing = () => {
             <div className="dl-head dl-reveal">
               <p className="dl-eyebrow">Inside the app</p>
               <h2 id="inside-title" className="dl-h2">What you get after you sign in.</h2>
-              <p className="dl-sub">Screens from the demo workspace, as the CTO and as a developer.</p>
+              <p className="dl-sub">Screens from the demo workspace, as the CTO and as an engineer.</p>
             </div>
             <div className="dl-reveal">
               <AppShowcase />
@@ -227,7 +228,7 @@ const Landing = () => {
               {ROLES.map((r) => (
                 <article key={r.persona} className="dl-role dl-reveal" aria-labelledby={`role-${r.persona}`}>
                   <header className="dl-role__head">
-                    <span className="dl-role__tag">{r.persona === "manager" ? "Manager" : "Developer"}</span>
+                    <span className="dl-role__tag">{r.persona === "manager" ? "Manager" : "Employee"}</span>
                     <h3 id={`role-${r.persona}`} className="dl-h3">{r.who}</h3>
                     <p>{r.title}</p>
                   </header>
@@ -256,23 +257,27 @@ const Landing = () => {
                 <h2 id="demo-title" className="dl-h2">A whole company to click around in, just for you.</h2>
                 <dl className="dl-facts">
                   <div><dt>12</dt><dd>people across Platform, Mobile and Quality &amp; Ops</dd></div>
-                  <div><dt>25</dt><dd>tasks with epics, a sprint and subtasks</dd></div>
+                  <div><dt>27</dt><dd>tasks with live timers, epics, a sprint and subtasks</dd></div>
                   <div><dt>24 h</dt><dd>then your private copy is deleted</dd></div>
                   <div><dt>Off</dt><dd>emails and notifications, so nobody gets pinged</dd></div>
                 </dl>
                 {signedIn ? (
                   <RouterLink to={APP_HOME} className="dl-btn dl-btn--primary dl-btn--lg">Open app <ArrowRight size={18} aria-hidden="true" /></RouterLink>
                 ) : (
-                  <div className="dl-personas">
-                    <div className="dl-persona">
-                      <p><strong>Odile, CTO.</strong> Sees all 11 people below her and the team timeline.</p>
-                      <PersonaButton persona="manager" label="Explore as the manager" />
+                  <>
+                    <div className="dl-personas">
+                      {DEMO_PERSONAS.map((p) => (
+                        <div key={p.persona} className="dl-persona">
+                          <p><strong>{p.label}: {p.who}.</strong> {p.sees}</p>
+                          <PersonaButton persona={p.persona} label={`Explore as ${p.label}`} />
+                        </div>
+                      ))}
                     </div>
-                    <div className="dl-persona">
-                      <p><strong>Mira, engineer.</strong> Sees her own work and picks up tasks.</p>
-                      <PersonaButton persona="developer" label="Explore as a developer" />
-                    </div>
-                  </div>
+                    <p className="dl-demo-sec__more">
+                      Want it for your own team?{" "}
+                      <RouterLink to="/request-workspace">Request a workspace</RouterLink>
+                    </p>
+                  </>
                 )}
               </div>
               <div className="dl-phones dl-reveal" aria-hidden="true">
@@ -312,7 +317,7 @@ const Landing = () => {
             <p className="dl-sub">
               {DEMO_ENABLED && !signedIn
                 ? "Open the demo and pick up a task. It takes a few seconds."
-                : "Sign in to open your team's timeline."}
+                : "Request a workspace for your team, or sign in if you've been invited."}
             </p>
             {ctas("band")}
           </div>

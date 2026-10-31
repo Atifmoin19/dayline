@@ -434,6 +434,8 @@
 .dl-persona__cta { display: grid; gap: 8px; }
 .dl-persona__cta .dl-btn { width: 100%; }
 .dl-persona__wait { font-size: 0.8125rem; color: #a5b4c8; }
+.dl-demo-sec__more { margin-top: 18px; font-size: 0.9375rem; color: #a5b4c8; }
+.dl-demo-sec__more a { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
 .dl-phones { display: flex; justify-content: center; gap: 16px; }
 .dl-phones img { width: 46%; max-width: 200px; height: auto; border-radius: 26px; border: 6px solid #1e293b; box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.6); background: #fff; }
 .dl-phones img:last-child { transform: translateY(36px); }
