@@ -43,10 +43,9 @@ config that routes to it.
 ## Tests & linting
 
 ```bash
-npm run lint    # eslint — 0 errors expected; ~25 warnings are tracked pre-existing debt
-                # (explicit `any` usages, 2 fast-refresh violations) deliberately not
-                # blocking CI, see the comment in eslint.config.js
-npm test        # vitest — 66 tests
+npm run lint       # eslint, 0 errors and 0 warnings expected
+npm run typecheck  # tsc -b over tsconfig.app.json + tsconfig.node.json
+npm test           # vitest
 npm run test:watch
 ```
 

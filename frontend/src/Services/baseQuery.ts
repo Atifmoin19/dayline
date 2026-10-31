@@ -1,4 +1,4 @@
-import { BaseQueryFn } from "@reduxjs/toolkit/dist/query";
+import type { BaseQueryFn } from "@reduxjs/toolkit/query";
 import type { SerializedError } from "@reduxjs/toolkit";
 import axios, { type AxiosError, type AxiosRequestConfig } from "axios";
 import { BASE_URL } from "../Utils/constants";

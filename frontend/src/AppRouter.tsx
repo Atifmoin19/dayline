@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from "react";
-import { Box, Flex, Spinner, Text } from "@chakra-ui/react";
+import { Flex, Spinner, Text } from "@chakra-ui/react";
 import { Route, Routes, useLocation } from "react-router-dom";
 
 import { useAppSelector } from "app/hooks";
@@ -134,22 +134,6 @@ function StandardRoutes() {
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
-  );
-}
-
-export function PageWrapper({
-  children,
-  idx,
-}: {
-  children: React.ReactNode;
-  idx: number;
-}) {
-  return (
-    <Box
-      animation={`pageTransition 0.2s ease-out ${(0.1 * idx) / 2}s backwards`}
-    >
-      {children}
-    </Box>
   );
 }
 

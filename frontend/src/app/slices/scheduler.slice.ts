@@ -2,7 +2,7 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { CompanyConfig, Employee, Task } from "types";
 
 
-interface SchedulerState {
+export interface SchedulerState {
     config: CompanyConfig;
     developers: Employee[];
     tasks: Task[];
