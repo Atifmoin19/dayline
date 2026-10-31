@@ -69,7 +69,7 @@ if os.getenv("SENTRY_DSN"):
 # (Replaces the rank checks that were previously scattered through this file.)
 import demo as demo_mod
 import permissions as perms
-from email_util import build_task_email_html, email_configured, send_email
+from email_util import app_link, build_task_email_html, email_configured, send_email
 from models import (
     AttachmentCreate,
     AttachmentRead,
@@ -147,7 +147,7 @@ from slack_util import send_slack, slack_configured
 # so root_path keeps the OpenAPI/docs server URL correct behind the proxy.
 app = FastAPI(
     root_path=os.getenv("API_ROOT_PATH", "/api"),
-    title="TaskBoard API",
+    title="Dayline API",
     description=(
         "Role-based task/time-tracking backend: auth + sessions, task CRUD with an "
         "overdue sweeper and timeline realignment, comments/links/attachments, "
@@ -296,9 +296,9 @@ def notify(
             for sub in subs:
                 result = send_push(
                     {"endpoint": sub.endpoint, "keys": {"p256dh": sub.p256dh, "auth": sub.auth}},
-                    title="TaskBoard",
+                    title="Dayline",
                     body=message,
-                    url=os.getenv("FRONTEND_APP_URL", "http://localhost:5173/"),
+                    url=app_link(f"tasks/{task_id}") if task_id else app_link(),
                     task_id=task_id,
                 )
                 if result.get("gone"):
@@ -312,7 +312,7 @@ def notify(
         try:
             user = db.query(UserModel).filter(UserModel.emp_id == recipient_id).first()
             if user and user.emp_email and email_configured():
-                subject = "TaskBoard — new update"
+                subject = "Dayline: new update"
                 html_body = message
                 mail_attachments = None
 
@@ -326,7 +326,7 @@ def notify(
                         TaskAttachmentModel.task_id == task_id
                     ).all()
                     heading = "Task Reassigned to You" if ntype == "reassigned" else "New Task Assigned"
-                    subject = f"TaskBoard — {heading}: {task.task_name}"
+                    subject = f"Dayline | {heading}: {task.task_name}"
                     html_body = build_task_email_html(
                         heading=heading,
                         actor_name=actor_name or (assigner.emp_name if assigner else "Someone"),
@@ -1093,7 +1093,7 @@ def sso_status():
 
 
 @app.get('/auth/sso/login', summary="Redirect to the IdP's authorization endpoint")
-def sso_login(next: str = "/"):
+def sso_login(next: str = "/app"):
     if not sso_configured():
         raise HTTPException(status_code=404, detail="SSO is not configured")
     state = secrets.token_urlsafe(24)
@@ -1159,7 +1159,7 @@ def sso_callback(
     db.commit()
     session_set(token, user.emp_id)
 
-    safe_next = next_path if next_path.startswith("/") else "/"
+    safe_next = next_path if next_path.startswith("/") else "/app"
     return RedirectResponse(f"{frontend_base}{safe_next}#sso_token={token}")
 
 

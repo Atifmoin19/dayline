@@ -1,4 +1,4 @@
-# TaskBoard — Feature Inventory (`plan.md`)
+# Dayline — Feature Inventory (`plan.md`)
 
 What the app does **today**. Snapshot after full audit of frontend + backend on 2026-07-25,
 updated 2026-07-26 for the task-detail-view + open-assignment + modal-redesign round, and again
@@ -440,7 +440,7 @@ revision (run `fk_preflight_audit.py` first — it reports orphaned rows the mig
 
 ---
 
-## 10. UI / UX — "TaskBoard Enterprise" (current state)
+## 10. UI / UX — "Dayline Enterprise" (current state)
 
 Professional enterprise redesign of all existing screens, incl. the once-deferred SuperAdmin
 pages (`CreateUserPage`, `CreateTaskPage`, `UserManagementPage`) — restyled to the same tokens
@@ -611,7 +611,7 @@ suites, CI (lint+test+build, both repos), a real dev/prod Docker split
 (Sentry, `GET /metrics`, documented `/docs`), the overdue sweeper migrated off the in-process
 asyncio loop onto **Celery + Celery Beat** (Redis now real broker/backend infra, not just a
 startup ping; cross-process WebSocket broadcast bridged via Redis pub/sub), branding
-standardized on **TaskBoard**, an accessibility/mobile pass (keyboard nav, ARIA labels, WCAG AA
+standardized on **Dayline**, an accessibility/mobile pass (keyboard nav, ARIA labels, WCAG AA
 contrast fixes, a mobile hamburger+Drawer nav below 768px), and real setup READMEs — and the full
 **Future UI/analytics** set: **capacity & utilization metrics** (`GET /capacity`, org-tree
 scoped), **skillset tags** (`users.skills`, §9), an **AI Insight panel** (`GET /insights`, Gemini
@@ -667,7 +667,7 @@ All former 🔸 items are now shipped; `pending.md` tracks the remaining P2/P3/F
   Unset ⇒ email is a silent no-op; in-app notifications still work. Assignment/reassignment
   emails (`notify()` → `build_task_email_html`, `email_util.py`) are a full HTML task-detail
   card — priority badge, status, assignee/assigner, due date, duration, tags, notes, an
-  "Open in TaskBoard" link (`FRONTEND_APP_URL`) — with any task attachments sent as real email
+  "Open in Dayline" link (`FRONTEND_APP_URL`) — with any task attachments sent as real email
   attachments (decoded from the base64 `task_attachments` rows).
 - **Slack (notifications)** — `SLACK_WEBHOOK_URL` (a Slack Incoming Webhook). Unset ⇒ silent
   no-op. Posts each notification to the webhook's channel, prefixed with the recipient's name.

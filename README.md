@@ -1,4 +1,4 @@
-# TaskBoard
+# Dayline
 
 Role-based task scheduling and time tracking: live day timeline with work sessions,
 task detail view, epics, sprints, org chart and capacity insights.
@@ -21,7 +21,7 @@ cp .env.example .env            # optional; set API_ROOT_PATH= to call uvicorn d
 cd frontend
 npm install
 cp .env.example .env.local
-npm run dev                     # http://localhost:5173/
+npm run dev                     # http://localhost:5173/ (landing), /app (signed-in home)
 ```
 
 Demo logins: any of `QB0001`..`QB0012`, password `ChangeMe123!` (see `backend/seed/quillbrook_labs.json`).

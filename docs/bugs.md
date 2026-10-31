@@ -1,4 +1,4 @@
-# TaskBoard — Bugs & Glitches (`bugs.md`)
+# Dayline — Bugs & Glitches (`bugs.md`)
 
 Issues in the codebase, grouped by severity/type. Audited 2026-07-25. **Fix pass 2026-07-25.**
 
@@ -57,7 +57,7 @@ Issues in the codebase, grouped by severity/type. Audited 2026-07-25. **Fix pass
 - ✅ **Commented decrypt block + `baseUrl` comment** in `baseQuery.ts` — removed.
 - ✅ **Dead `localStorage["timeline_view_date"]` write** — removed.
 - ✅ **`console.log` in prod paths** — removed (dashboard, baseQuery, login, modal).
-- ✅ **Branding inconsistency** — one name, "TaskBoard", across UI, docs, comments and tests (final product name TBD).
+- ✅ **Branding inconsistency** — one name, "Dayline", across UI, docs, comments and tests (final product name TBD).
 
 ---
 
@@ -97,7 +97,7 @@ Issues in the codebase, grouped by severity/type. Audited 2026-07-25. **Fix pass
 
 ---
 
-## Fixed 2026-10-31 (TaskBoard revive)
+## Fixed 2026-10-31 (Dayline revive)
 
 - ✅ **Capacity: work beyond the horizon vanished** — with the multi-day horizon every day was capped at 100%, so nobody could read as `over_capacitated` from backlog alone. The last day now absorbs the remainder. Sessions crossing local midnight are split by overlap. Capacity/insights tests run at three frozen instants (business hours, after hours, just past midnight). — `main.py` `_capacity_for_employee`, `_sessions_seconds_on_date`
 

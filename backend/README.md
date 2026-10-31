@@ -1,6 +1,6 @@
-# TaskBoard — Backend
+# Dayline — Backend
 
-FastAPI backend for TaskBoard, a role-based task scheduling / time-tracking app. The org hierarchy drives visibility, task assignment is open to any user, and a live day-timeline
+FastAPI backend for Dayline, a role-based task scheduling / time-tracking app. The org hierarchy drives visibility, task assignment is open to any user, and a live day-timeline
 tracks actual work sessions (pick / hold / resume / done) with automatic overdue handling.
 
 See `../docs/plan.md` for the full feature inventory and `../docs/pending.md`

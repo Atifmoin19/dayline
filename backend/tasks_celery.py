@@ -155,3 +155,18 @@ def sweep_overdue_tasks() -> dict:
         publish_ws_event({"event": "tasks_changed"})
 
     return {"auto_held": auto_held, "backlogged": backlogged}
+
+
+@celery_app.task(name="tasks_celery.purge_expired_demo_workspaces")
+def purge_expired_demo_workspaces() -> dict:
+    """Hourly: delete "Try the demo" workspaces past their expiry (see demo.py). Runs even
+    when demo mode is off, so turning it off still cleans up what was created."""
+    import demo
+    import task_helpers
+
+    db = SessionLocal()
+    try:
+        return {"purged": demo.purge_expired(db, task_helpers.utc_now())}
+    finally:
+        db.close()
+

@@ -1,4 +1,4 @@
-# TaskBoard — Pending Work (`pending.md`)
+# Dayline — Pending Work (`pending.md`)
 
 **Only open work lives here.** Everything shipped — P0 security foundation, P1 robustness, the
 P1.5 UI redesign (incl. the SuperAdmin restyle), the timeline actual-history redesign + all its
@@ -54,18 +54,16 @@ creation + progress rollup** (the former deferred multi-assignee ask, resolved b
 
 `POST /demo` (backend `DEMO_MODE_ENABLED=true`) + the login-page button (frontend
 `VITE_DEMO_ENABLED=true`). Each visitor gets an isolated copy of Quillbrook Labs, tagged by
-`workspace_id`, purged after `DEMO_TTL_HOURS`. Open follow-ups:
+`workspace_id`, purged after `DEMO_TTL_HOURS` (on every `POST /demo` and hourly by the
+`purge-expired-demo-workspaces` Celery Beat job). Demo users opening admin URLs are sent to
+`/app` with a notice. Open follow-ups:
 
 - [ ] **Idle logout inside a demo.** Sessions still expire after 15 minutes of inactivity; a
   visitor who comes back later must click "Try the demo" again and gets a new workspace
   (counts toward the per-IP limit). Consider a longer session TTL for demo users.
-- [ ] **Purge only runs on the next `POST /demo`.** Fine for a low-traffic demo; a Celery Beat
-  job calling `demo.purge_expired` would bound storage even with no new visitors.
 - [ ] **Set `DEMO_IP_SALT`** to a random value wherever the demo is public, and run behind a
   proxy that sets the real client address (`uvicorn --proxy-headers`), or every visitor
   shares one per-IP budget.
-- [ ] **Admin routes are hidden, not removed, for demo users** in the frontend (the sidebar
-  hides Administration; the backend returns 403). Direct URLs show the page with errors.
 
 ---
 

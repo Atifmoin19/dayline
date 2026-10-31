@@ -39,6 +39,12 @@ PRIORITY_STYLE = {
 APP_URL = os.getenv("FRONTEND_APP_URL", "http://localhost:5173/")
 
 
+def app_link(path: str = "app") -> str:
+    """Absolute frontend link. FRONTEND_APP_URL is the site root (the landing page lives at
+    "/"); the signed-in app home is "/app" and tasks deep-link at "/tasks/<id>"."""
+    return APP_URL.rstrip("/") + "/" + path.lstrip("/")
+
+
 def _esc(value) -> str:
     """Minimal HTML-escape for values interpolated into the email template."""
     if value is None:
@@ -97,7 +103,7 @@ def build_task_email_html(
     return f"""
     <div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:560px;margin:0 auto;">
       <div style="background:linear-gradient(135deg,#2563eb,#4f46e5);border-radius:10px 10px 0 0;padding:20px 24px;">
-        <div style="color:#dbeafe;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">TaskBoard</div>
+        <div style="color:#dbeafe;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">Dayline</div>
         <div style="color:#ffffff;font-size:18px;font-weight:700;margin-top:4px;">{_esc(heading)}</div>
       </div>
       <div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px;padding:20px 24px;">
@@ -122,7 +128,7 @@ def build_task_email_html(
           </table>
         </div>
         <div style="margin-top:20px;text-align:center;">
-          <a href="{_esc(APP_URL)}" style="background:#2563eb;color:#fff;text-decoration:none;font-size:13px;font-weight:600;padding:10px 22px;border-radius:8px;display:inline-block;">Open in TaskBoard</a>
+          <a href="{_esc(app_link(f'tasks/{task_id}') if task_id else app_link())}" style="background:#2563eb;color:#fff;text-decoration:none;font-size:13px;font-weight:600;padding:10px 22px;border-radius:8px;display:inline-block;">Open in Dayline</a>
         </div>
         <p style="color:#94a3b8;font-size:11px;margin:20px 0 0;text-align:center;">Task ID: {_esc(task_id)}</p>
       </div>

@@ -94,7 +94,7 @@ def build_authorize_url(state: str, next_path: str) -> str:
     if not sso_configured():
         raise RuntimeError("SSO is not configured (OIDC_ISSUER/CLIENT_ID/SECRET/REDIRECT_URI)")
     discovery = _fetch_discovery()
-    _store_state(state, next_path or "/")
+    _store_state(state, next_path or "/app")
     params = {
         "response_type": "code",
         "client_id": OIDC_CLIENT_ID,

@@ -67,5 +67,10 @@ celery_app.conf.update(
             "task": "tasks_celery.sweep_overdue_tasks",
             "schedule": OVERDUE_SWEEP_INTERVAL_SECONDS,
         },
+        # POST /demo also purges on every call; this bounds storage when nobody visits.
+        "purge-expired-demo-workspaces": {
+            "task": "tasks_celery.purge_expired_demo_workspaces",
+            "schedule": 3600,
+        },
     },
 )

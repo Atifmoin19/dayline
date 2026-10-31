@@ -224,3 +224,21 @@ def test_expired_workspaces_are_purged_on_next_call(client, demo_on, db_session,
     assert db_session.query(Sprint).filter(Sprint.workspace_id == old_ws).count() == 0
     assert db_session.query(Task).count() == 25  # only the new workspace's tasks remain
     assert client.get("/tasks", headers=old_token).status_code == 401
+
+
+def test_celery_beat_purges_expired_demo_workspaces_hourly(client, demo_on, db_session, freeze_now):
+    import celery_app
+    import tasks_celery
+
+    entry = celery_app.celery_app.conf.beat_schedule["purge-expired-demo-workspaces"]
+    assert entry["task"] == "tasks_celery.purge_expired_demo_workspaces"
+    assert entry["schedule"] == 3600
+
+    t0 = freeze_now(datetime(2026, 3, 11, 5, 0, tzinfo=timezone.utc))
+    assert start_demo(client).status_code == 200
+    assert tasks_celery.purge_expired_demo_workspaces() == {"purged": 0}
+    freeze_now(t0 + timedelta(hours=25))
+    assert tasks_celery.purge_expired_demo_workspaces() == {"purged": 1}
+    db_session.expire_all()
+    assert db_session.query(DemoWorkspace).count() == 0
+    assert db_session.query(User).count() == 0

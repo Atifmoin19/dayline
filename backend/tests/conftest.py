@@ -1,5 +1,5 @@
 """
-Shared pytest fixtures for the TaskBoard backend test suite.
+Shared pytest fixtures for the Dayline backend test suite.
 
 IMPORTANT — env vars must be set BEFORE any app module is imported, because:
   - models.py reads DATABASE_URL at import time to build its engine.

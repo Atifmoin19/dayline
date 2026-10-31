@@ -1,4 +1,4 @@
-# TaskBoard — Org-Scale Gap Analysis & Plan
+# Dayline — Org-Scale Gap Analysis & Plan
 
 Context: current shipped state (`plan.md`) works well for the actual org today (44 real HRIS
 employees, low hundreds of tasks). This doc asks: what breaks / what's missing if this org grows
