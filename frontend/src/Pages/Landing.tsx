@@ -55,7 +55,7 @@ const ENGINEERING = [
   { k: "Live", t: "WebSocket updates", d: "A pick, hold or edit on one screen shows up on every other open screen." },
   { k: "Jobs", t: "In-process scheduler", d: "The overdue sweep every 60 seconds and the hourly demo purge, guarded by Postgres advisory locks so only one instance runs each job." },
   { k: "Demo", t: "Isolated workspaces", d: "Every visitor gets their own copy of the sample company, scoped by workspace and purged when it expires." },
-  { k: "Tests", t: "247 backend + 170 frontend", d: "pytest against Postgres for the API and rules, Vitest and Testing Library for the UI." },
+  { k: "Tests", t: "260 backend + 190 frontend", d: "pytest against Postgres for the API and rules, Vitest and Testing Library for the UI." },
   { k: "Host", t: "One free process", d: "FastAPI and Postgres. No Redis, no worker: sessions and fan-out fall back to the database and the process." },
 ];
 
