@@ -27,7 +27,7 @@ creation + progress rollup** (the former deferred multi-assignee ask, resolved b
   own engine succeeds) — dev being caught up doesn't mean prod is. **2026-07-27: confirmed there
   is no prod deployment/DATABASE_URL yet** — this repo's `.env` only has a local Postgres
   connection string, nothing pointing at prod. Not actionable until a prod Postgres instance
-  exists; when it does, follow the deployment checklist below in order (step 2 is this migration).
+  exists; when it does, follow the deployment checklist below in order (step 2).
 
 ---
 
@@ -39,14 +39,6 @@ creation + progress rollup** (the former deferred multi-assignee ask, resolved b
   are unset everywhere (dev and prod), so `GET /auth/sso/status` reports disabled and the
   button never shows. Needs someone to actually register this app with an IdP (Okta/Azure
   AD/Google Workspace) and set the four `OIDC_*` env vars — not a code gap, a credentials one.
-- [ ] **Fresh-database `alembic upgrade head` fails on SQLite** (`no such table: users`): the
-  baseline revision assumes pre-existing tables. Dev/tests use `init_db()` (create_all) instead.
-  Needs a real initial-schema migration before Postgres-from-zero deploys rely on Alembic alone.
-- [ ] **Frontend typecheck is not wired up.** `tsconfig.app.json` lacks the path aliases
-  (`tsc -p tsconfig.app.json` errors on every import) and `tsc -b` fails on the node project
-  reference; `tsc -p tsconfig.json` reports 10 pre-existing errors (`Animations/transtion.tsx`,
-  `Components/ElementStripper.tsx`, one unused import). `npm run build` (Vite) is unaffected.
-- [ ] **`bulk_reset_passwords.py`**: one ruff import-order finding (I001).
 - [ ] **Bulk task CSV upload (`/tasks/upload`) has no subtask column support.** Only
   `POST /tasks`'s `subtasks` field and `POST /tasks/{id}/subtasks` create subtasks; a CSV import
   can't stage them. Low priority — CSV task upload is a bulk/admin path, subtask creation is
@@ -61,12 +53,9 @@ creation + progress rollup** (the former deferred multi-assignee ask, resolved b
 ## Deployment — pending on your side (run on prod Postgres, in order)
 
 1. `python fk_preflight_audit.py` — review orphan counts (read-only).
-2. `alembic upgrade head` — applies `0002` (foreign keys), `0003` (enriched HRIS columns),
-   `0004` (task_attachments table), `0005` (push_subscriptions table), `0006` (skills column),
-   `0007` (timezone column), `0008` (ticket_id), and `0009` (subtask progress rollup +
-   `task_links` unique/composite/check constraints — verified against dev, not yet run on prod;
-   dedupes any accidental duplicate `task_links` rows before adding the unique constraint, so
-   it's safe to run even if some already exist). Also `pip install -r requirements.txt` (adds
+2. `alembic upgrade head` on a new database (the single `0001_initial_schema` baseline builds the
+   whole schema). A database built by the old chain must first be at `0015_add_is_onboarded`,
+   then `alembic stamp --purge 0001_initial_schema` (see `backend/README.md`). Also `pip install -r requirements.txt` (adds
    `pywebpush`, `sentry-sdk`, `celery`, `redis`, `google-genai`) and set on prod:
    `VAPID_PRIVATE_KEY`/`VAPID_PUBLIC_KEY`/`VAPID_CLAIMS_EMAIL` (mint separate prod keys, don't
    reuse the dev pair), `SENTRY_DSN`/`ENVIRONMENT` (optional), `GEMINI_API_KEY`(+`_2`/`_3`)/
