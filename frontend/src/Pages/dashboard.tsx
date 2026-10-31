@@ -20,8 +20,8 @@ import { useAppDispatch, useAppSelector } from "app/hooks";
 import { Task } from "types";
 import SimpleLayout from "Layouts/simpleLayout";
 import { useTaskDetail } from "Contexts/useTaskDetail";
-import { addDeveloper, addTask } from "app/slices/scheduler.slice";
-import { useTaskListQuery, useLazyUserListQuery } from "Services/user.api";
+import { addTask } from "app/slices/scheduler.slice";
+import { useTaskListQuery } from "Services/user.api";
 import { ADMIN_ROLES, SUPER_ADMIN_ROLES } from "Utils/constants";
 import { getManagerOptions } from "Utils/orgTree";
 import { BRAND_GLOW } from "Styles";
@@ -51,7 +51,6 @@ const Dashboard: React.FC = () => {
     },
   );
 
-  const [getUserList] = useLazyUserListQuery();
 
   useEffect(() => {
     if (taskData) {
@@ -69,20 +68,6 @@ const Dashboard: React.FC = () => {
     [allDevelopers, currentUser],
   );
 
-  // Load the full user directory (any authed user may read it). The timeline decides which
-  // rows to show by role; the hierarchy popover needs the whole directory to resolve a
-  // person's manager (fixes "No Manager" on a developer's own view) and to show a manager +
-  // their reportees (self included).
-  useEffect(() => {
-    if (currentUser) {
-      getUserList()
-        .unwrap()
-        .then((resp) => {
-          dispatch(addDeveloper(resp || []));
-        })
-        .catch(() => {});
-    }
-  }, [currentUser, getUserList, dispatch]);
   const handleCreateTask = () => {
     onOpen();
   };

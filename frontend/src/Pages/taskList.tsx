@@ -16,9 +16,9 @@ import SimpleLayout from "Layouts/simpleLayout";
 import { Link, useNavigate } from "react-router-dom";
 import { Task } from "types";
 import { useTaskDetail } from "Contexts/useTaskDetail";
-import { useTaskListQuery, useLazyUserListQuery } from "Services/user.api";
+import { useTaskListQuery } from "Services/user.api";
 import { useAppDispatch, useAppSelector } from "app/hooks";
-import { addTask, addDeveloper } from "app/slices/scheduler.slice";
+import { addTask } from "app/slices/scheduler.slice";
 import { ADMIN_ROLES, SUPER_ADMIN_ROLES } from "Utils/constants";
 import { FaChartBar } from "Utils/icons";
 
@@ -48,7 +48,6 @@ const TaskListPage: React.FC = () => {
     }
   );
 
-  const [getUserList] = useLazyUserListQuery();
 
   useEffect(() => {
     if (taskData) {
@@ -56,16 +55,6 @@ const TaskListPage: React.FC = () => {
     }
   }, [taskData, dispatch]);
 
-  useEffect(() => {
-    if (currentUser) {
-      getUserList()
-        .unwrap()
-        .then((resp) => {
-          dispatch(addDeveloper(resp || []));
-        })
-        .catch(() => {});
-    }
-  }, [currentUser, getUserList, dispatch]);
 
   const allDevelopers = useAppSelector((state) => state.scheduler.developers);
 

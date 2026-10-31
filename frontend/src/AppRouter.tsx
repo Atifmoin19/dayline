@@ -12,6 +12,7 @@ import { SUPER_ADMIN_ROLES } from "Utils/constants";
 // warning). Login is kept eager since it's commonly the first screen an unauthenticated
 // user hits, and is cheap on its own.
 import Login from "Pages/login";
+import { useUserDirectorySync } from "hooks/useUserDirectorySync";
 const Onboarding = lazy(() => import("Pages/onboarding"));
 const Dashboard = lazy(() => import("Pages/dashboard"));
 const TaskListPage = lazy(() => import("Pages/taskList"));
@@ -52,6 +53,7 @@ const RouteLoadingFallback: React.FC = () => (
 const ProtectedRoute = () => {
   const { currentUser } = useAppSelector((state) => state.scheduler);
   const location = useLocation();
+  useUserDirectorySync(); // one directory fetch for every authed route, deep links included
   return currentUser ? (
     <Outlet />
   ) : (
