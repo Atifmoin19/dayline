@@ -1,4 +1,3 @@
-import os
 from logging.config import fileConfig
 
 from dotenv import load_dotenv
@@ -12,8 +11,11 @@ load_dotenv()
 # access to the values within the .ini file in use.
 config = context.config
 
-# Use the app's DATABASE_URL (falls back to the same SQLite default as models.py).
-db_url = os.getenv("DATABASE_URL", "sqlite:///./taskboard_dev.db")
+# Same resolution as the app: DATABASE_URL, else a loudly-logged SQLite dev fallback
+# (refused when ENVIRONMENT=production).
+from models import resolve_database_url
+
+db_url = resolve_database_url()
 config.set_main_option("sqlalchemy.url", db_url)
 
 # Interpret the config file for Python logging.

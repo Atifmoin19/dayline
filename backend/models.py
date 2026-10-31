@@ -1,3 +1,4 @@
+import logging
 import os
 from datetime import datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -20,6 +21,8 @@ from sqlalchemy import (
     create_engine,
 )
 from sqlalchemy.orm import declarative_base, sessionmaker
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -395,10 +398,30 @@ class Notification(Base):
 
 # Database engine/session setup
 # Prefer DATABASE_URL env var. Example: postgresql+psycopg://user:pass@localhost:5432/taskboard
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    # Fallback to SQLite for dev if Postgres URL is not configured
-    DATABASE_URL = "sqlite:///./taskboard_dev.db"
+SQLITE_FALLBACK_URL = "sqlite:///./taskboard_dev.db"
+
+
+def resolve_database_url(env=None) -> str:
+    """DATABASE_URL, or a local SQLite file for dev. The fallback is logged loudly, and
+    SQLite (fallback or explicit) is refused outright when ENVIRONMENT=production so a
+    missing env var can never silently put production data in a throwaway file."""
+    env = os.environ if env is None else env
+    url = env.get("DATABASE_URL") or ""
+    is_production = (env.get("ENVIRONMENT") or "").strip().lower() == "production"
+    if not url:
+        if is_production:
+            raise RuntimeError("DATABASE_URL is not set and ENVIRONMENT=production; refusing to fall back to SQLite.")
+        logger.warning(
+            "DATABASE_URL is not set; falling back to local SQLite (%s). Fine for dev, never for real data.",
+            SQLITE_FALLBACK_URL,
+        )
+        return SQLITE_FALLBACK_URL
+    if is_production and url.startswith("sqlite"):
+        raise RuntimeError("SQLite is not supported when ENVIRONMENT=production; set DATABASE_URL to Postgres.")
+    return url
+
+
+DATABASE_URL = resolve_database_url()
 
 # SQLite needs check_same_thread=False here because FastAPI/Starlette runs sync request
 # handlers in a threadpool — a request's DB session may be opened/used on a different
