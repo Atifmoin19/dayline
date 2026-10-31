@@ -17,6 +17,7 @@ const loadLanding = () => import("Pages/Landing");
 if (typeof window !== "undefined" && window.location.pathname === "/") void loadLanding();
 const Landing = lazy(loadLanding);
 const Onboarding = lazy(() => import("Pages/onboarding"));
+const RequestWorkspace = lazy(() => import("Pages/RequestWorkspace"));
 const Dashboard = lazy(() => import("Pages/dashboard"));
 const TaskListPage = lazy(() => import("Pages/taskList"));
 const TaskDetailPage = lazy(() => import("Pages/TaskDetailPage"));
@@ -66,7 +67,9 @@ function StandardRoutes() {
         {/* Public landing page; signed-in users see it too, with an "Open app" button. */}
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
+        {/* Invite-link only (/onboarding?emp_id=...): sets a password for an admin-created user. */}
         <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/request-workspace" element={<RequestWorkspace />} />
 
         {/* Basic authenticated routes */}
         <Route element={<ProtectedRoute />}>

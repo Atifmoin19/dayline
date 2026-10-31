@@ -19,7 +19,7 @@ import {
   Stepper,
   useSteps,
 } from "@chakra-ui/react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Navigate, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useAppDispatch } from "app/hooks";
 import { setCurrentUser, setToken } from "app/slices/scheduler.slice";
 import {
@@ -64,8 +64,12 @@ const Onboarding: React.FC = () => {
   const { activeStep, setActiveStep } = useSteps({ index: 0, count: STEPS.length });
   const [showStoryboard, setShowStoryboard] = useState(false);
 
-  const [empId, setEmpId] = useState("");
-  const [empEmail, setEmpEmail] = useState("");
+  // Reached only through an invite link from an admin (/onboarding?emp_id=...&email=...).
+  // Visitors without one are sent to "Request a workspace" instead.
+  const [searchParams] = useSearchParams();
+  const inviteEmpId = searchParams.get("emp_id")?.trim() || "";
+  const [empId, setEmpId] = useState(inviteEmpId);
+  const [empEmail, setEmpEmail] = useState(searchParams.get("email")?.trim() || "");
   const [profile, setProfile] = useState<OnboardingPreviewResponse | null>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -113,6 +117,10 @@ const Onboarding: React.FC = () => {
       toast({ title: "Something went wrong", description: errorMsg, status: "error" });
     }
   };
+
+  if (!inviteEmpId) {
+    return <Navigate to="/request-workspace" replace />;
+  }
 
   if (showStoryboard) {
     return (

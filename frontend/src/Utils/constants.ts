@@ -7,6 +7,10 @@ export const GITHUB_URL = import.meta.env.VITE_GITHUB_URL || "https://github.com
 export const PORTFOLIO_URL = "https://portfolio.fullstackcity.in";
 /** Show "Try the demo" on the login page (the backend must also set DEMO_MODE_ENABLED=true). */
 export const DEMO_ENABLED = import.meta.env.VITE_DEMO_ENABLED === "true";
+/** Shared contact API that emails the owner about "Request a workspace" submissions. */
+export const CONTACT_API_URL = (
+  import.meta.env.VITE_CONTACT_API_URL || "https://api.fullstackcity.in/portfolio"
+).replace(/\/+$/, "");
 
 export const HEADER_HEIGHT = "3.6rem";
 
