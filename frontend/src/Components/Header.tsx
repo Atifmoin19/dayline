@@ -36,7 +36,7 @@ const Header: React.FC<HeaderProps> = ({ onOpenNav }) => {
   const handleLogout = () => {
     const finish = () => {
       dispatch(resetStore());
-      sessionStorage.removeItem("pendingModalShown");
+      if (currentUser) sessionStorage.removeItem(`pendingModalShown:${currentUser.emp_id}`);
       navigate("/login", { replace: true });
     };
     logout().unwrap().then(finish).catch(finish);

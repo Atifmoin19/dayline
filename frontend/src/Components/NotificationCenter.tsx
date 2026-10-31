@@ -13,7 +13,6 @@ import {
   Text,
   Button,
   VStack,
-  useDisclosure,
 } from "@chakra-ui/react";
 import { FaRegBell } from "Utils/icons";
 import {
@@ -23,6 +22,7 @@ import {
 } from "Services/user.api";
 import { useAppSelector } from "app/hooks";
 import { usePendingTasks } from "hooks/usePendingTasks";
+import { useShowOncePerSession } from "hooks/useShowOncePerSession";
 import { usePushNotifications } from "hooks/usePushNotifications";
 import { getPriorityColor } from "Utils/priority";
 import PendingTasksModal from "./PendingTasksModal";
@@ -68,21 +68,21 @@ const NotificationCenter: React.FC = () => {
   const [markRead] = useMarkNotificationReadMutation();
   const [markAllRead] = useMarkAllNotificationsReadMutation();
   const pending = usePendingTasks();
-  const { isOpen: modalOpen, onOpen: openModal, onClose: closeModal } = useDisclosure();
+  // Auto-open the reminders modal once per session per user when there's actionable work;
+  // it only counts as shown once dismissed (see useShowOncePerSession).
+  const {
+    isOpen: modalOpen,
+    open: openModal,
+    close: closeModal,
+  } = useShowOncePerSession(
+    `pendingModalShown:${currentUser?.emp_id ?? ""}`,
+    Boolean(currentUser) && pending.length > 0,
+  );
   const push = usePushNotifications();
 
   const notifications = data?.items || [];
   const unread = data?.unread || 0;
   const totalBadge = unread + pending.length;
-
-  // Auto-open the reminders modal once per session when there's actionable work.
-  React.useEffect(() => {
-    const shown = sessionStorage.getItem("pendingModalShown");
-    if (currentUser && pending.length > 0 && !shown) {
-      openModal();
-      sessionStorage.setItem("pendingModalShown", "true");
-    }
-  }, [currentUser, pending.length, openModal]);
 
   return (
     <>
