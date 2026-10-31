@@ -8,6 +8,7 @@ import secrets
 import time
 from collections.abc import Generator
 from datetime import datetime, timedelta, timezone
+from typing import Literal
 from urllib.parse import quote
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -31,7 +32,7 @@ from pydantic import BaseModel
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -66,6 +67,7 @@ if os.getenv("SENTRY_DSN"):
 
 # Central RBAC — single source of truth for ranks + every authorization decision.
 # (Replaces the rank checks that were previously scattered through this file.)
+import demo as demo_mod
 import permissions as perms
 from email_util import build_task_email_html, email_configured, send_email
 from models import (
@@ -279,6 +281,12 @@ def notify(
         ))
     except Exception as e:  # noqa: BLE001 — best-effort per docstring above: never break the request
         logger.error(f"notify (db) failed for {recipient_id}: {e}")
+
+    # Demo-workspace users get in-app notifications only: never email, Slack or web-push.
+    if db.query(UserModel.emp_id).filter(
+        UserModel.emp_id == recipient_id, UserModel.workspace_id.isnot(None)
+    ).first():
+        return
 
     if push_configured():
         try:
@@ -560,9 +568,30 @@ def verify_token(authorization: str | None = Header(None), db=Depends(get_db)):
     return user
 
 
+DEMO_FORBIDDEN = "Not available in the demo workspace"
+
+
+def _epics_in_workspace(db, current_user):
+    """Epics visible to `current_user`: those of their own workspace (see User.workspace_id)."""
+    return db.query(EpicModel).filter(perms.workspace_clause(EpicModel.workspace_id, current_user.workspace_id))
+
+
+def _sprints_in_workspace(db, current_user):
+    return db.query(SprintModel).filter(perms.workspace_clause(SprintModel.workspace_id, current_user.workspace_id))
+
+
+def require_not_demo(current_user=Depends(verify_token)):
+    """Blocks demo-workspace users (POST /demo) from admin, bulk-import and outbound features."""
+    if current_user.is_demo:
+        raise HTTPException(status_code=403, detail=DEMO_FORBIDDEN)
+    return current_user
+
+
 def require_admin(current_user=Depends(verify_token)):
     """FastAPI dependency gating user-management endpoints. The actual rule
     (rank >= L2 or an admin role) lives in permissions.can_manage_users."""
+    if current_user.is_demo:
+        raise HTTPException(status_code=403, detail=DEMO_FORBIDDEN)
     if perms.can_manage_users(current_user):
         return current_user
     raise HTTPException(status_code=403, detail="Admin privileges required for this action")
@@ -573,6 +602,8 @@ def require_user_admin(current_user=Depends(verify_token)):
     import). Broader than `require_admin` — also admits a `dept_admin` grant — but each
     endpoint body still enforces the actual department scope via
     `permissions.can_manage_department` before touching a specific target."""
+    if current_user.is_demo:
+        raise HTTPException(status_code=403, detail=DEMO_FORBIDDEN)
     if perms.can_manage_users_at_all(current_user):
         return current_user
     raise HTTPException(status_code=403, detail="Admin privileges required for this action")
@@ -581,6 +612,8 @@ def require_user_admin(current_user=Depends(verify_token)):
 def require_admin_or_auditor(current_user=Depends(verify_token)):
     """Gates admin-only READ surfaces (audit log, enriched user directory): full admin,
     dept_admin, or auditor. Never used for a mutation endpoint — see require_user_admin."""
+    if current_user.is_demo:
+        raise HTTPException(status_code=403, detail=DEMO_FORBIDDEN)
     if perms.can_view_admin_surfaces(current_user):
         return current_user
     raise HTTPException(status_code=403, detail="Admin privileges required for this action")
@@ -910,6 +943,11 @@ def login(request: Request, login_req: LoginRequest, db=Depends(get_db)):
     if not is_hashed(foundation.password):
         foundation.password = hash_password(login_req.password)
 
+    return response(status.HTTP_200_OK, message="Login successful", data=_issue_session(db, foundation, user))
+
+
+def _issue_session(db, foundation, user) -> dict:
+    """Start a session for `user` (DB token + Redis) and build the standard auth payload."""
     token = secrets.token_hex(16)
     foundation.token = token
     foundation.last_active_at = utc_now()
@@ -917,20 +955,43 @@ def login(request: Request, login_req: LoginRequest, db=Depends(get_db)):
 
     # Primary session store: Redis with a sliding TTL. DB token above is the fallback.
     session_set(token, user.emp_id)
-    
-    user_data = UserRead.from_orm(user).dict()
-    # Remove token/password if present? UserRead doesn't have password, Foundation has.
-    # UserRead might have 'token' field if not updated properly in models, but we removed it or it is optional traverse.
-    # Note: UserRead no longer has 'token' populated from User model since we removed it from User model.
-    # If UserRead still has the field in Pydantic, it will be None.
-    if "token" in user_data:
-        del user_data["token"]
 
-    data = {
-        "token": token,
-        "userData": user_data
+    user_data = UserRead.from_orm(user).dict()
+    user_data.pop("token", None)
+    return {"token": token, "userData": user_data}
+
+
+class DemoRequest(BaseModel):
+    persona: Literal["manager", "developer"] = "manager"
+
+
+@app.post('/demo', status_code=200, summary="Start a disposable demo workspace (DEMO_MODE_ENABLED only)")
+def start_demo(request: Request, payload: DemoRequest | None = None, db=Depends(get_db)):
+    """Purges expired demo workspaces, creates a fresh isolated copy of the Quillbrook Labs
+    demo org, and logs the caller in as the chosen persona (manager = the CTO, who sees the
+    whole demo org; developer = a senior engineer). Same response shape as POST /login,
+    plus `demo: {workspace_id, persona, expires_at}`. See demo.py for settings."""
+    if not demo_mod.enabled():
+        raise HTTPException(status_code=404, detail="Not Found")
+    persona = (payload or DemoRequest()).persona
+    now = utc_now()
+    demo_mod.purge_expired(db, now)
+
+    ip_hash = demo_mod.hash_ip(request.client.host if request.client else "unknown")
+    if demo_mod.recent_count_for_ip(db, ip_hash, now) >= demo_mod.max_per_ip_per_hour():
+        raise HTTPException(status_code=429, detail="Too many demo workspaces from this address. Try again later.")
+    if demo_mod.live_count(db, now) >= demo_mod.max_live_workspaces():
+        raise HTTPException(status_code=429, detail="The demo is at capacity right now. Try again later.")
+
+    workspace, user = demo_mod.create_workspace(db, now, persona, ip_hash)
+    foundation = db.query(Foundation).filter(Foundation.emp_id == user.emp_id).one()
+    data = _issue_session(db, foundation, user)
+    data["demo"] = {
+        "workspace_id": workspace.id,
+        "persona": persona,
+        "expires_at": workspace.expires_at.isoformat(),
     }
-    return response(status.HTTP_200_OK, message="Login successful", data=data)
+    return response(status.HTTP_200_OK, message="Demo workspace ready", data=data)
 
 
 @app.post('/register', status_code=200, summary="Set a password for a pre-provisioned user")
@@ -946,6 +1007,8 @@ def register(request: Request, reg_req: RegisterRequest, db=Depends(get_db)):
 
     if not user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User validation failed. Invalid ID or Email.")
+    if user.is_demo:
+        raise HTTPException(status_code=403, detail=DEMO_FORBIDDEN)
 
     # 2. Check/Create Foundation Entry
     foundation = db.query(Foundation).filter(Foundation.emp_id == reg_req.emp_id).first()
@@ -1244,10 +1307,12 @@ def get_users(user_id: str | None = None, db=Depends(get_db), current_user=Depen
         # Get all subordinates recursively (naturally excludes the user_id itself)
         subordinate_ids = get_all_subordinates(db, user_id)
         
-        users = db.query(UserModel).filter(UserModel.emp_id.in_(subordinate_ids)).all()
+        users = perms.users_in_workspace(db, current_user.workspace_id).filter(
+            UserModel.emp_id.in_(subordinate_ids)
+        ).all()
     else:
         # Default behavior: fetch all users (or could be restricted to current_user scope if desired later)
-        users = db.query(UserModel).all()
+        users = perms.users_in_workspace(db, current_user.workspace_id).all()
 
     # The directory listing is open to every authenticated user (org chart + the
     # any-to-any assignee picker need the full company directory), so it must not carry
@@ -1480,7 +1545,12 @@ def get_audit_log(
     — this is an audit trail, not a search index, so no free-text matching. `limit` capped at
     500 so a careless admin request can't pull the entire table in one response."""
     limit = max(1, min(limit, 500))
-    query = db.query(AuditLogModel)
+    query = db.query(AuditLogModel).filter(or_(
+        AuditLogModel.actor_emp_id.is_(None),
+        AuditLogModel.actor_emp_id.notin_(
+            db.query(UserModel.emp_id).filter(UserModel.workspace_id.isnot(None))
+        ),
+    ))
     if action:
         query = query.filter(AuditLogModel.action == action)
     if actor_emp_id:
@@ -1531,9 +1601,9 @@ def create_task(task: TaskCreate, db=Depends(get_db), current_user=Depends(verif
     # Validate Rank Logic
     validate_assignee_eligibility(assigned_user)
 
-    if task.epic_id and not db.query(EpicModel).filter(EpicModel.id == task.epic_id).first():
+    if task.epic_id and not _epics_in_workspace(db, current_user).filter(EpicModel.id == task.epic_id).first():
         raise HTTPException(status_code=400, detail="Epic not found")
-    if task.sprint_id and not db.query(SprintModel).filter(SprintModel.id == task.sprint_id).first():
+    if task.sprint_id and not _sprints_in_workspace(db, current_user).filter(SprintModel.id == task.sprint_id).first():
         raise HTTPException(status_code=400, detail="Sprint not found")
 
     # Logic to Append New Task to End of Timeline
@@ -1832,9 +1902,9 @@ def update_task(task_id: str, task: TaskCreate, db=Depends(get_db), current_user
     # Validate Rank Logic
     validate_assignee_eligibility(assigned_user)
 
-    if task.epic_id and not db.query(EpicModel).filter(EpicModel.id == task.epic_id).first():
+    if task.epic_id and not _epics_in_workspace(db, current_user).filter(EpicModel.id == task.epic_id).first():
         raise HTTPException(status_code=400, detail="Epic not found")
-    if task.sprint_id and not db.query(SprintModel).filter(SprintModel.id == task.sprint_id).first():
+    if task.sprint_id and not _sprints_in_workspace(db, current_user).filter(SprintModel.id == task.sprint_id).first():
         raise HTTPException(status_code=400, detail="Sprint not found")
 
     # Capture old status + assignee before assignments
@@ -2164,8 +2234,10 @@ def metrics(db=Depends(get_db), current_user=Depends(verify_token)):
     except SQLAlchemyError:
         db_ok = False
 
+    workspace_users = perms.users_in_workspace(db, current_user.workspace_id).with_entities(UserModel.emp_id)
     open_tasks = db.query(TaskModel).filter(
-        TaskModel.task_status.notin_(_CLOSED_TASK_STATUSES)
+        TaskModel.task_status.notin_(_CLOSED_TASK_STATUSES),
+        TaskModel.task_assigned_to.in_(workspace_users),
     ).all()
     active_session_count = sum(
         1 for t in open_tasks if any(s.get("end_time") is None for s in (t.task_sessions or []))
@@ -2492,7 +2564,7 @@ def admin_employee_overview(db=Depends(get_db), current_user=Depends(require_adm
     is a dedicated surface meant to see every employee regardless of org tree, by explicit
     product requirement (unlike /capacity, which stays org-tree scoped like the rest of the
     app — see the comment on GET /capacity above)."""
-    employees = db.query(UserModel).order_by(UserModel.emp_id).all()
+    employees = perms.users_in_workspace(db, current_user.workspace_id).order_by(UserModel.emp_id).all()
     foundations = {f.emp_id: f for f in db.query(Foundation).all()}
 
     now_dt = utc_now()
@@ -2834,7 +2906,7 @@ def get_assignee_suggestions(
     """
     requested_tags = _split_tags(tags)
 
-    all_users = db.query(UserModel).order_by(UserModel.emp_id).all()
+    all_users = perms.users_in_workspace(db, current_user.workspace_id).order_by(UserModel.emp_id).all()
     users_by_id = {u.emp_id: u for u in all_users}
 
     # Seniority/UX filter — see the module comment + this function's docstring above. Applied
@@ -3470,7 +3542,8 @@ def add_task_comment(task_id: str, payload: CommentCreate, db=Depends(get_db), c
 def delete_comment(comment_id: int, db=Depends(get_db), current_user=Depends(verify_token)):
     """Author or an admin may delete; system-generated activity-log entries can't be deleted."""
     row = db.query(TaskCommentModel).filter(TaskCommentModel.id == comment_id).first()
-    if not row:
+    task = db.query(TaskModel).filter(TaskModel.id == row.task_id).first() if row else None
+    if not row or not task or not perms.same_workspace(db, current_user, task.task_assigned_to or task.task_assigned_by):
         raise HTTPException(status_code=404, detail="Comment not found")
     if row.is_system:
         raise HTTPException(status_code=400, detail="Activity-log entries cannot be deleted")
@@ -3531,7 +3604,7 @@ def get_vapid_public_key(current_user=Depends(verify_token)):
 
 @app.post('/push/subscribe', status_code=201)
 def subscribe_push(
-    payload: PushSubscriptionCreate, db=Depends(get_db), current_user=Depends(verify_token)
+    payload: PushSubscriptionCreate, db=Depends(get_db), current_user=Depends(require_not_demo)
 ):
     """Register (or re-register) a browser's push subscription for the current user.
     Upserts on endpoint so re-subscribing the same browser doesn't create duplicates."""
@@ -3616,7 +3689,7 @@ def add_task_link(task_id: str, payload: LinkCreate, db=Depends(get_db), current
 
     a = db.query(TaskModel).filter(TaskModel.id == task_id).first()
     b = db.query(TaskModel).filter(TaskModel.id == payload.to_task_id).first()
-    if not a or not b:
+    if not a or not b or not perms.same_workspace(db, current_user, b.task_assigned_to or b.task_assigned_by):
         raise HTTPException(status_code=404, detail="Task not found")
 
     # Modifying a task's structural links requires modify rights on that task.
@@ -3795,7 +3868,7 @@ def create_epic(payload: EpicCreate, db=Depends(get_db), current_user=Depends(ve
     owner_id = payload.owner_id or current_user.emp_id
     if payload.owner_id:
         owner = db.query(UserModel).filter(UserModel.emp_id == payload.owner_id).first()
-        if not owner:
+        if not owner or owner.workspace_id != current_user.workspace_id:
             raise HTTPException(status_code=400, detail="Owner not found")
 
     epic_id = secrets.token_hex(8)
@@ -3816,6 +3889,7 @@ def create_epic(payload: EpicCreate, db=Depends(get_db), current_user=Depends(ve
         created_by=current_user.emp_id,
         created_at=utc_now(),
         updated_at=utc_now(),
+        workspace_id=current_user.workspace_id,
     )
     db.add(epic)
     db.commit()
@@ -3827,13 +3901,13 @@ def create_epic(payload: EpicCreate, db=Depends(get_db), current_user=Depends(ve
 def list_epics(db=Depends(get_db), current_user=Depends(verify_token)):
     """Not org-tree scoped — an epic spans teams by definition, same reasoning as the
     Organization view (plan.md §10): it's shared planning info, not access-gated data."""
-    epics = db.query(EpicModel).order_by(EpicModel.created_at.desc()).all()
+    epics = _epics_in_workspace(db, current_user).order_by(EpicModel.created_at.desc()).all()
     return response(status.HTTP_200_OK, message="Epics fetched", data=[_epic_to_dict(db, e) for e in epics])
 
 
 @app.get('/epics/{epic_id}', status_code=200, summary="Epic detail + its linked stories")
 def get_epic(epic_id: str, db=Depends(get_db), current_user=Depends(verify_token)):
-    epic = db.query(EpicModel).filter(EpicModel.id == epic_id).first()
+    epic = _epics_in_workspace(db, current_user).filter(EpicModel.id == epic_id).first()
     if not epic:
         raise HTTPException(status_code=404, detail="Epic not found")
     data = _epic_to_dict(db, epic)
@@ -3844,7 +3918,7 @@ def get_epic(epic_id: str, db=Depends(get_db), current_user=Depends(verify_token
 
 @app.put('/epics/{epic_id}', status_code=200, summary="Update an Epic (owner/creator/admin only)")
 def update_epic(epic_id: str, payload: EpicUpdate, db=Depends(get_db), current_user=Depends(verify_token)):
-    epic = db.query(EpicModel).filter(EpicModel.id == epic_id).with_for_update().first()
+    epic = _epics_in_workspace(db, current_user).filter(EpicModel.id == epic_id).with_for_update().first()
     if not epic:
         raise HTTPException(status_code=404, detail="Epic not found")
     if not can_modify_epic(current_user, epic):
@@ -3878,7 +3952,7 @@ def update_epic(epic_id: str, payload: EpicUpdate, db=Depends(get_db), current_u
 def delete_epic(epic_id: str, db=Depends(get_db), current_user=Depends(verify_token)):
     """Detaches (does not delete) its linked stories — tasks.epic_id is ON DELETE SET NULL,
     matching how deleting a user detaches their tasks rather than deleting them."""
-    epic = db.query(EpicModel).filter(EpicModel.id == epic_id).with_for_update().first()
+    epic = _epics_in_workspace(db, current_user).filter(EpicModel.id == epic_id).with_for_update().first()
     if not epic:
         raise HTTPException(status_code=404, detail="Epic not found")
     if not can_modify_epic(current_user, epic):
@@ -3946,6 +4020,7 @@ def create_sprint(payload: SprintCreate, db=Depends(get_db), current_user=Depend
         end_date=payload.end_date,
         created_by=current_user.emp_id,
         created_at=utc_now(),
+        workspace_id=current_user.workspace_id,
     )
     db.add(sprint)
     db.commit()
@@ -3957,13 +4032,13 @@ def create_sprint(payload: SprintCreate, db=Depends(get_db), current_user=Depend
 def list_sprints(db=Depends(get_db), current_user=Depends(verify_token)):
     """Not org-tree scoped — a sprint/cycle is a shared planning cadence, same reasoning as
     Epics and the Organization view."""
-    sprints = db.query(SprintModel).order_by(SprintModel.start_date.desc()).all()
+    sprints = _sprints_in_workspace(db, current_user).order_by(SprintModel.start_date.desc()).all()
     return response(status.HTTP_200_OK, message="Sprints fetched", data=[_sprint_to_dict(db, s) for s in sprints])
 
 
 @app.get('/sprints/{sprint_id}', status_code=200, summary="Sprint detail + linked tasks")
 def get_sprint(sprint_id: str, db=Depends(get_db), current_user=Depends(verify_token)):
-    sprint = db.query(SprintModel).filter(SprintModel.id == sprint_id).first()
+    sprint = _sprints_in_workspace(db, current_user).filter(SprintModel.id == sprint_id).first()
     if not sprint:
         raise HTTPException(status_code=404, detail="Sprint not found")
     data = _sprint_to_dict(db, sprint)
@@ -3974,7 +4049,7 @@ def get_sprint(sprint_id: str, db=Depends(get_db), current_user=Depends(verify_t
 
 @app.put('/sprints/{sprint_id}', status_code=200, summary="Update a Sprint/Cycle (creator/admin only)")
 def update_sprint(sprint_id: str, payload: SprintUpdate, db=Depends(get_db), current_user=Depends(verify_token)):
-    sprint = db.query(SprintModel).filter(SprintModel.id == sprint_id).with_for_update().first()
+    sprint = _sprints_in_workspace(db, current_user).filter(SprintModel.id == sprint_id).with_for_update().first()
     if not sprint:
         raise HTTPException(status_code=404, detail="Sprint not found")
     if not can_modify_sprint(current_user, sprint):
@@ -3998,7 +4073,7 @@ def update_sprint(sprint_id: str, payload: SprintUpdate, db=Depends(get_db), cur
 @app.delete('/sprints/{sprint_id}', status_code=200, summary="Delete a Sprint/Cycle (creator/admin only)")
 def delete_sprint(sprint_id: str, db=Depends(get_db), current_user=Depends(verify_token)):
     """Detaches (does not delete) its linked tasks — tasks.sprint_id is ON DELETE SET NULL."""
-    sprint = db.query(SprintModel).filter(SprintModel.id == sprint_id).with_for_update().first()
+    sprint = _sprints_in_workspace(db, current_user).filter(SprintModel.id == sprint_id).with_for_update().first()
     if not sprint:
         raise HTTPException(status_code=404, detail="Sprint not found")
     if not can_modify_sprint(current_user, sprint):
@@ -4018,7 +4093,7 @@ def get_sprint_burndown(sprint_id: str, db=Depends(get_db), current_user=Depends
     against the sprint's total scope (task_duration hours). A future day's
     `actual_remaining_hours` is null (not 0) — it isn't knowable yet, and the frontend chart
     should show "no data" there, not a fabricated flat line."""
-    sprint = db.query(SprintModel).filter(SprintModel.id == sprint_id).first()
+    sprint = _sprints_in_workspace(db, current_user).filter(SprintModel.id == sprint_id).first()
     if not sprint:
         raise HTTPException(status_code=404, detail="Sprint not found")
 
@@ -4297,7 +4372,7 @@ async def upload_users(file: UploadFile = File(...), db=Depends(get_db), current
 
 
 @app.post('/tasks/upload', status_code=200, summary="Bulk-create tasks from a CSV")
-async def upload_tasks(file: UploadFile = File(...), db=Depends(get_db), current_user=Depends(verify_token)):
+async def upload_tasks(file: UploadFile = File(...), db=Depends(get_db), current_user=Depends(require_not_demo)):
     """All-or-nothing: every row is validated first, and the whole batch is rejected on the
     first error (unlike /users/upload, which skips bad rows).
 
@@ -4353,7 +4428,7 @@ async def upload_tasks(file: UploadFile = File(...), db=Depends(get_db), current
         validate_assignee_eligibility(user)
 
         epic_id = (row.get("epic_id") or "").strip() or None
-        if epic_id and not db.query(EpicModel).filter(EpicModel.id == epic_id).first():
+        if epic_id and not _epics_in_workspace(db, current_user).filter(EpicModel.id == epic_id).first():
             raise HTTPException(status_code=400, detail=f"Row {line_num}: epic_id '{epic_id}' not found")
 
         # ID Handling: If missing, generate.

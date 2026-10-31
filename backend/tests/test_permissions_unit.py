@@ -86,10 +86,14 @@ def test_can_assign_task_to_allows_self_assignment(db_session, org):
     assert perms.can_assign_task_to(db_session, org["se"], org["se"].emp_id) is True
 
 
-def test_can_assign_task_to_allows_unrelated_or_nonexistent_target(db_session, org):
-    """The predicate takes a bare emp_id string and never even looks it up — it is a pure
-    `return True`. Confirms it doesn't accidentally validate existence/eligibility either."""
-    assert perms.can_assign_task_to(db_session, org["se"], "SOME-EMP-ID-THAT-DOES-NOT-EXIST") is True
+def test_can_assign_task_to_is_bounded_by_workspace_only(db_session, org):
+    """Open in every direction inside one organisation, but never across workspaces (a
+    POST /demo sandbox vs the real org), and never to someone who doesn't exist."""
+    assert perms.can_assign_task_to(db_session, org["se"], "SE002") is True
+    assert perms.can_assign_task_to(db_session, org["se"], "SOME-EMP-ID-THAT-DOES-NOT-EXIST") is False
+    org["se2"].workspace_id = "sandbox1"
+    db_session.commit()
+    assert perms.can_assign_task_to(db_session, org["se"], "SE002") is False
 
 
 @pytest.mark.parametrize("designation", ["SOFTWARE ENGINEER", "CHIEF TECHNOLOGY OFFICER", None])

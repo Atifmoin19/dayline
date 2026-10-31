@@ -1,6 +1,6 @@
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from dotenv import load_dotenv
@@ -17,6 +17,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    TypeDecorator,
     UniqueConstraint,
     create_engine,
     false,
@@ -28,6 +29,20 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 Base = declarative_base()
+
+
+class UTCDateTime(TypeDecorator):
+    """DateTime(timezone=True) that always hands back timezone-aware UTC values. Postgres
+    already does; SQLite (dev fallback, tests) stores no offset and would otherwise return
+    naive datetimes that crash comparisons against utc_now()."""
+    impl = DateTime(timezone=True)
+    cache_ok = True
+
+    def process_result_value(self, value, dialect):
+        if value is not None and value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value
+
 
 # SQLAlchemy ORM models
 class User(Base):
@@ -97,6 +112,15 @@ class User(Base):
     # (absent from ProfileSelfUpdate).
     special_role = Column(String(32), nullable=True)
 
+    # Tenancy for "Try the demo" sandboxes: NULL = the real organisation; otherwise the id of
+    # a DemoWorkspace. Every directory/epic/sprint listing and every cross-user permission
+    # check compares this value, so demo workspaces never see each other or the real org.
+    workspace_id = Column(String(32), nullable=True, index=True)
+
+    @property
+    def is_demo(self) -> bool:
+        return self.workspace_id is not None
+
     __table_args__ = (
         CheckConstraint(
             "special_role IN ('dept_admin', 'auditor')", name="ck_users_special_role",
@@ -115,7 +139,7 @@ class Foundation(Base):
     )
     password = Column(String(255), nullable=False)
     token = Column(String(255), nullable=True)
-    last_active_at = Column(DateTime(timezone=True), nullable=True)
+    last_active_at = Column(UTCDateTime(), nullable=True)
     # False until the onboarding wizard (or /register) sets a real password, replacing the
     # bulk-reset default. Backfilled by migration 0015 for pre-existing rows; drives the
     # admin panel's onboarded/pending listing without a per-row bcrypt check on every load.
@@ -144,17 +168,17 @@ class Task(Base):
         ForeignKey("users.emp_id", ondelete="SET NULL", name="fk_tasks_assigned_by"),
         nullable=True,
     )
-    task_assigned_date = Column(DateTime(timezone=True), nullable=True)
-    task_due_date = Column(DateTime(timezone=True), nullable=True)
+    task_assigned_date = Column(UTCDateTime(), nullable=True)
+    task_due_date = Column(UTCDateTime(), nullable=True)
     task_priority = Column(String(32), nullable=True)
     task_tags = Column(String(255), nullable=True)
     task_notes = Column(String(1024), nullable=True)
-    task_created_at = Column(DateTime(timezone=True), nullable=True)
-    task_updated_at = Column(DateTime(timezone=True), nullable=True)
+    task_created_at = Column(UTCDateTime(), nullable=True)
+    task_updated_at = Column(UTCDateTime(), nullable=True)
     task_duration = Column(String(32), nullable=True)
     time_spent = Column(Float, nullable=True, default=0.0)
     task_sessions = Column(JSON, nullable=True, default=list)
-    completed_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(UTCDateTime(), nullable=True)
     # Denormalized subtask rollup (see task_links link_type="subtask"). Recomputed from truth
     # on every write that touches a subtask edge or a child's status — never incremented in
     # place — so it can't drift under concurrent edits. 0 total = not a story, no progress bar.
@@ -223,6 +247,7 @@ class Epic(Base):
     __tablename__ = "epics"
 
     id = Column(String(64), primary_key=True, index=True)
+    workspace_id = Column(String(32), nullable=True, index=True)  # see User.workspace_id
     # Human-facing reference, e.g. "E-04821" — same pattern as tasks.ticket_id.
     ticket_id = Column(String(16), unique=True, nullable=True, index=True)
     name = Column(String(255), nullable=False)
@@ -241,15 +266,15 @@ class Epic(Base):
     # Jul-Sep across 4 teams". Both optional: an epic with neither set just doesn't render a
     # bar on the roadmap (it still appears in the Epics list). Named distinctly from a task's
     # `task_due_date` since this is the INITIATIVE's own planned window, not any one story's.
-    start_date = Column(DateTime(timezone=True), nullable=True)
-    target_date = Column(DateTime(timezone=True), nullable=True)
+    start_date = Column(UTCDateTime(), nullable=True)
+    target_date = Column(UTCDateTime(), nullable=True)
     created_by = Column(
         String(64),
         ForeignKey("users.emp_id", ondelete="SET NULL", name="fk_epics_created_by"),
         nullable=True,
     )
-    created_at = Column(DateTime(timezone=True), nullable=True)
-    updated_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(UTCDateTime(), nullable=True)
+    updated_at = Column(UTCDateTime(), nullable=True)
 
 
 class Sprint(Base):
@@ -263,15 +288,16 @@ class Sprint(Base):
     __tablename__ = "sprints"
 
     id = Column(String(64), primary_key=True, index=True)
+    workspace_id = Column(String(32), nullable=True, index=True)  # see User.workspace_id
     name = Column(String(255), nullable=False)
-    start_date = Column(DateTime(timezone=True), nullable=False)
-    end_date = Column(DateTime(timezone=True), nullable=False)
+    start_date = Column(UTCDateTime(), nullable=False)
+    end_date = Column(UTCDateTime(), nullable=False)
     created_by = Column(
         String(64),
         ForeignKey("users.emp_id", ondelete="SET NULL", name="fk_sprints_created_by"),
         nullable=True,
     )
-    created_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(UTCDateTime(), nullable=True)
 
 
 class TaskComment(Base):
@@ -289,7 +315,7 @@ class TaskComment(Base):
     author_name = Column(String(255), nullable=True)          # denormalized for display
     body = Column(String(2048), nullable=False)
     is_system = Column(Boolean, nullable=False, default=False, server_default=false())  # True = auto activity-log entry
-    created_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(UTCDateTime(), nullable=True)
 
 
 class TaskLink(Base):
@@ -310,7 +336,7 @@ class TaskLink(Base):
         nullable=False, index=True,
     )
     link_type = Column(String(32), nullable=False)
-    created_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(UTCDateTime(), nullable=True)
 
     __table_args__ = (
         # Closes a TOCTOU race: the app-level duplicate check in add_task_link() ran a
@@ -338,7 +364,7 @@ class TaskAttachment(Base):
     content_type = Column(String(128), nullable=True)   # e.g. image/png
     data = Column(Text, nullable=False)                 # base64 (data URI), stored inline
     uploaded_by = Column(String(64), nullable=True)     # users.emp_id
-    created_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(UTCDateTime(), nullable=True)
 
 
 class PushSubscription(Base):
@@ -353,7 +379,7 @@ class PushSubscription(Base):
     endpoint = Column(Text, nullable=False, unique=True)
     p256dh = Column(String(255), nullable=False)
     auth = Column(String(255), nullable=False)
-    created_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(UTCDateTime(), nullable=True)
 
 
 class AuditLog(Base):
@@ -380,7 +406,20 @@ class AuditLog(Base):
     # Free-form JSON summary — e.g. {"before": {...}, "after": {...}} for an update,
     # {"added": 12, "skipped": 3} for a CSV import. Never holds secrets (passwords/tokens).
     details = Column(JSON, nullable=True)
-    created_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(UTCDateTime(), nullable=True)
+
+
+class DemoWorkspace(Base):
+    """A disposable "Try the demo" sandbox (POST /demo). Its users, epics and sprints carry
+    `workspace_id = id`; everything is purged once `expires_at` passes. `ip_hash` (a salted
+    SHA-256, never the raw address) only backs the per-IP creation limit."""
+    __tablename__ = "demo_workspaces"
+
+    id = Column(String(32), primary_key=True)
+    persona_emp_id = Column(String(64), nullable=True)
+    ip_hash = Column(String(64), nullable=True, index=True)
+    created_at = Column(UTCDateTime(), nullable=False, index=True)
+    expires_at = Column(UTCDateTime(), nullable=False, index=True)
 
 
 class Notification(Base):
@@ -400,7 +439,7 @@ class Notification(Base):
         nullable=True,
     )               # deep-link target
     is_read = Column(Boolean, nullable=False, default=False, server_default=false())
-    created_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(UTCDateTime(), nullable=True)
 
 
 # Database engine/session setup
@@ -564,6 +603,7 @@ class UserRead(BaseModel):
     skills: list[str] | None = None
     timezone: str | None = None
     special_role: str | None = None
+    is_demo: bool = False
 
     class Config:
         from_attributes = True  # Pydantic v2 ORM mode

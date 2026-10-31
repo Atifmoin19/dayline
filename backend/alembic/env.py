@@ -34,6 +34,16 @@ target_metadata = Base.metadata
 # ... etc.
 
 
+def render_item(type_, obj, autogen_context):
+    """Render models.UTCDateTime as a plain sa.DateTime(timezone=True) in migrations, so
+    revision files never import the app's models module."""
+    from models import UTCDateTime
+
+    if type_ == "type" and isinstance(obj, UTCDateTime):
+        return "sa.DateTime(timezone=True)"
+    return False
+
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
@@ -50,6 +60,7 @@ def run_migrations_offline() -> None:
     context.configure(
         url=url,
         target_metadata=target_metadata,
+        render_item=render_item,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
@@ -73,7 +84,7 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection, target_metadata=target_metadata, render_item=render_item
         )
 
         with context.begin_transaction():

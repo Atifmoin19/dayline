@@ -114,6 +114,26 @@ ADMIN_DESIGNATIONS = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Workspaces (tenancy). NULL = the real organisation; a value = a POST /demo sandbox.
+# Users never see, assign to or modify anything outside their own workspace.
+# ---------------------------------------------------------------------------
+def workspace_clause(column, workspace_id):
+    """SQL filter matching `column` to `workspace_id`, treating None as the real org."""
+    return column.is_(None) if workspace_id is None else column == workspace_id
+
+
+def users_in_workspace(db, workspace_id):
+    return db.query(UserModel).filter(workspace_clause(UserModel.workspace_id, workspace_id))
+
+
+def same_workspace(db, actor: UserModel, target_emp_id: str | None) -> bool:
+    if not target_emp_id:
+        return False
+    row = db.query(UserModel.workspace_id).filter(UserModel.emp_id == target_emp_id).first()
+    return row is not None and row[0] == actor.workspace_id
+
+
 def get_rank(designation: str | None) -> int:
     """Numeric rank for a designation (0 for unknown/blank). Case-insensitive."""
     if not designation:
@@ -253,6 +273,8 @@ def can_modify_task(db, actor: UserModel, task) -> bool:
     Assignee, assigner, an admin, or a manager in whose subtree the assignee sits.
     This is the exact predicate the delete endpoints already used, now shared.
     """
+    if not same_workspace(db, actor, task.task_assigned_to or task.task_assigned_by):
+        return False
     if is_admin(actor):
         return True
     if task.task_assigned_to == actor.emp_id:
@@ -269,8 +291,9 @@ def can_assign_task_to(db, actor: UserModel, target_emp_id: str) -> bool:
     or a senior/manager/exec) — hierarchy no longer gates who can be handed a task. Kept
     as a named predicate (rather than removed) so call sites keep a single place to read
     "who may assign to whom" from, and so a future rule change has one place to land.
+    The one hard boundary is the workspace: never across organisations / demo sandboxes.
     """
-    return True
+    return same_workspace(db, actor, target_emp_id)
 
 
 def can_delete_comment(actor: UserModel, comment) -> bool:
