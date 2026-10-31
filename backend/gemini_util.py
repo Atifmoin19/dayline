@@ -5,7 +5,7 @@ Env vars (see .env.example — "AI Insight" section). Multiple Gemini
 keys may be provided:
 
     GEMINI_API_KEY, GEMINI_API_KEY_2, GEMINI_API_KEY_3   -- tried in order, first success wins
-    GEMINI_MODEL                                          -- defaults to "gemini-2.0-flash" if unset
+    GEMINI_MODEL                                          -- defaults to "gemini-2.5-flash" if unset
 
 Follows this codebase's "unset env var = silent no-op / graceful degradation" idiom, same as
 email_util.py/slack_util.py/push_util.py: if NO key is configured, `gemini_configured()` is
@@ -38,7 +38,7 @@ GEMINI_API_KEYS = [
 
 # No product spec pins a specific model yet; "flash" is the sensible default for a
 # request-time (not batch) summarization call — fast + cheap relative to "pro" tiers.
-GEMINI_MODEL = os.getenv("GEMINI_MODEL") or "gemini-2.0-flash"
+GEMINI_MODEL = os.getenv("GEMINI_MODEL") or "gemini-2.5-flash"
 
 
 def gemini_configured() -> bool:

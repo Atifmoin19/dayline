@@ -75,14 +75,14 @@ In the Render logs you should see `Scheduled job overdue_sweep ran: ...` and
 
 4. Client-side routes (`/app`, `/tasks/<id>`, ...) are served by `frontend/vercel.json`,
    which rewrites every path to `index.html`. Static files such as `/sw.js` are served first.
-5. Deploy and note the URL, e.g. `https://dayline.vercel.app`.
+5. Deploy and note the URL, e.g. `https://dayline-alpha-ten.vercel.app`.
 
 ## 4. Point the API at the frontend
 
 Back in Render, open `dayline-api` > **Environment** and set:
 
-- `FRONTEND_ORIGIN` = `https://dayline.vercel.app` (CORS; comma-separate if you add a custom domain)
-- `FRONTEND_APP_URL` = `https://dayline.vercel.app` (links in notifications)
+- `FRONTEND_ORIGIN` = `https://dayline-alpha-ten.vercel.app` (CORS; comma-separate if you add a custom domain)
+- `FRONTEND_APP_URL` = `https://dayline-alpha-ten.vercel.app` (links in notifications)
 
 Save; Render redeploys. Then open the Vercel URL, click **Try the demo**, and you should
 land on `/app` in a fresh demo workspace.
