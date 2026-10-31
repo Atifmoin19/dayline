@@ -37,6 +37,8 @@ os.environ.setdefault("FRONTEND_ORIGIN", "")
 
 sys.path.insert(0, str(REPO_ROOT))
 
+from datetime import datetime, timezone
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -163,3 +165,32 @@ def auth_as(client):
     def _auth_as(emp_id, password=DEFAULT_PASSWORD):
         return login(client, emp_id, password)
     return _auth_as
+
+
+# ---------------------------------------------------------------------------------------
+# Deterministic clock. Capacity / insights math depends on "now" relative to the business
+# day (BUSINESS_TZ, 10:00-19:00) and calendar-day boundaries, so tests that touch it must
+# not read the wall clock. `freeze_now(dt)` pins every utc_now() the app (and the test
+# module itself) sees to `dt`, which must be timezone-aware.
+# ---------------------------------------------------------------------------------------
+# Representative instants (UTC) for BUSINESS_TZ=Asia/Kolkata (UTC+5:30):
+CLOCK_SAMPLES = {
+    "business_hours": datetime(2026, 3, 11, 5, 0, tzinfo=timezone.utc),   # 10:30 local
+    "after_hours": datetime(2026, 3, 11, 16, 30, tzinfo=timezone.utc),    # 22:00 local
+    "just_after_midnight": datetime(2026, 3, 11, 19, 0, tzinfo=timezone.utc),  # 00:30 local
+}
+
+
+@pytest.fixture
+def freeze_now(monkeypatch, request):
+    def _freeze(dt):
+        import audit_util
+        import task_helpers
+        targets = [task_helpers, main, audit_util]
+        if request.module is not None:
+            targets.append(request.module)
+        for mod in targets:
+            if hasattr(mod, "utc_now"):
+                monkeypatch.setattr(mod, "utc_now", lambda: dt)
+        return dt
+    return _freeze

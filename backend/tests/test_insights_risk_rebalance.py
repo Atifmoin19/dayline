@@ -13,8 +13,19 @@ just present-and-empty.
 """
 from datetime import timedelta
 
+import pytest
+
 import gemini_util
 from main import utc_now
+from tests.conftest import CLOCK_SAMPLES
+
+
+# Run every test here at several fixed instants (inside business hours, after hours and just
+# past local midnight) so results never depend on when the suite happens to run.
+@pytest.fixture(autouse=True, params=sorted(CLOCK_SAMPLES), ids=sorted(CLOCK_SAMPLES))
+def _fixed_clock(request, freeze_now):
+    return freeze_now(CLOCK_SAMPLES[request.param])
+
 
 
 def create_task(client, headers, assigned_to, task_id, assigned_by=None, duration="2:00", **extra):

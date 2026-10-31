@@ -13,11 +13,22 @@ Covers:
   - the aggregate summary's counts agree with the per-employee status buckets.
 """
 from datetime import timedelta
+from zoneinfo import ZoneInfo
 
+import pytest
 from sqlalchemy.orm.attributes import flag_modified
 
 from models import Task as TaskModel
-from task_helpers import BUSINESS_END_HOUR, BUSINESS_START_HOUR, utc_now
+from task_helpers import BUSINESS_END_HOUR, BUSINESS_START_HOUR, BUSINESS_TZ, utc_now
+from tests.conftest import CLOCK_SAMPLES
+
+
+# Run every test here at several fixed instants (inside business hours, after hours and just
+# past local midnight) so results never depend on when the suite happens to run.
+@pytest.fixture(autouse=True, params=sorted(CLOCK_SAMPLES), ids=sorted(CLOCK_SAMPLES))
+def _fixed_clock(request, freeze_now):
+    return freeze_now(CLOCK_SAMPLES[request.param])
+
 
 BUSINESS_DAY_SECONDS = (BUSINESS_END_HOUR - BUSINESS_START_HOUR) * 3600.0
 
@@ -99,8 +110,12 @@ def test_open_session_worked_time_counts_toward_todays_committed_seconds(
     r = client.get("/capacity", headers=headers)
     row = employee_row(r.json(), "SE001")
     today = row["days"][0]
-    # ~3h = 10800s worked so far today; allow slack for wall-clock drift while the test ran.
-    assert 10700 <= today["committed_seconds"] <= 10900
+    # The session started 3h ago; only the part inside today's local calendar day counts
+    # (just after midnight, that is less than 3h). The clock is frozen, so this is exact.
+    now = utc_now()
+    local_midnight = now.astimezone(ZoneInfo(BUSINESS_TZ)).replace(hour=0, minute=0, second=0, microsecond=0)
+    expected_worked = min(10800.0, (now - local_midnight).total_seconds())
+    assert abs(today["committed_seconds"] - expected_worked) <= 1
     expected_pct = round((today["committed_seconds"] / BUSINESS_DAY_SECONDS) * 100, 1)
     assert today["utilization_pct"] == expected_pct
 
@@ -150,3 +165,16 @@ def test_aggregate_summary_counts_match_per_employee_statuses(client, org, auth_
 
     expected_avg = round(sum(e["utilization_pct"] for e in employees) / len(employees), 1)
     assert summary["avg_utilization_pct"] == expected_avg
+
+
+def test_backlog_beyond_horizon_lands_on_last_day_for_any_horizon(client, org, auth_as):
+    """Regression: with a multi-day horizon every day used to be capped at 100%, so work
+    that could not fit inside the window vanished and nobody read as over_capacitated."""
+    headers = auth_as("SE001")
+    create_task(client, headers, "SE001", "CAP-HUGE", duration="100:00")
+    for days in (1, 2, 5):
+        row = employee_row(client.get(f"/capacity?days={days}", headers=headers).json(), "SE001")
+        assert len(row["days"]) == days
+        assert sum(d["committed_seconds"] for d in row["days"]) == 100 * 3600
+        assert row["days"][-1]["utilization_pct"] > 100.0
+        assert row["status"] == "over_capacitated"

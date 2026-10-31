@@ -2236,14 +2236,18 @@ def _sessions_seconds_on_date(sessions, target_date, now_dt, tz_name: str = BUSI
     in-progress task's elapsed time count toward "committed" load."""
     total = 0.0
     tz = ZoneInfo(tz_name)
+    # Count only the part of each session that overlaps target_date's local calendar day,
+    # so a session that crosses midnight is split between the two days instead of being
+    # attributed wholly to the day it started on.
+    day_start = datetime.combine(target_date, datetime.min.time(), tzinfo=tz)
+    day_end = day_start + timedelta(days=1)
     for s in sessions or []:
         start = parse_dt(s.get("start_time"))
         if not start:
             continue
-        if start.astimezone(tz).date() != target_date:
-            continue
         end = parse_dt(s.get("end_time")) or now_dt
-        total += max(0.0, (end - start).total_seconds())
+        overlap = (min(end, day_end) - max(start, day_start)).total_seconds()
+        total += max(0.0, overlap)
     return total
 
 
@@ -2326,17 +2330,25 @@ def _capacity_for_employee(
 
     days = []
     remaining_backlog = backlog_seconds
-    for i in range(max(1, num_days)):
+    horizon = max(1, num_days)
+    for i in range(horizon):
         day_date = today_date + timedelta(days=i)
+        is_last_day = i == horizon - 1
         if i == 0:
             headroom = max(0.0, available_seconds_per_day - worked_today)
-            allocated = min(remaining_backlog, headroom)
+            allocated = remaining_backlog if is_last_day else min(remaining_backlog, headroom)
             committed = worked_today + allocated
         else:
             # Sessions can't be logged against a future date — every subsequent day's
             # "committed" figure is purely spilled-over backlog.
-            allocated = min(remaining_backlog, available_seconds_per_day)
+            allocated = (
+                remaining_backlog if is_last_day
+                else min(remaining_backlog, available_seconds_per_day)
+            )
             committed = allocated
+        # The LAST day of the horizon absorbs whatever backlog is still unallocated, so
+        # work that cannot fit inside the window shows up as >100% (over_capacitated)
+        # instead of being silently dropped.
         remaining_backlog -= allocated
         days.append({
             "date": day_date.isoformat(),
