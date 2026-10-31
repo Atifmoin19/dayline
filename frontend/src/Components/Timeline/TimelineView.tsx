@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
+import { scheduleRefreshKey } from "Utils/scheduleRefresh";
 import {
   Box,
   Flex,
@@ -156,8 +157,14 @@ const TimelineView: React.FC<TimelineViewProps> = ({
     return () => clearInterval(interval);
   }, []);
 
+  // Recompute the (expensive) schedule only when data changes, the day rolls over, or, while
+  // a session is live, on the minute tick. Idle teams no longer re-run it every minute.
+  const dayKey = getLocalDateKey(new Date());
+  const refreshKey = useMemo(() => scheduleRefreshKey(tasks, tick, dayKey), [tasks, tick, dayKey]);
+
   // Memoize schedule calculation
   const schedule = useMemo(() => {
+    void refreshKey; // clock dependency, see scheduleRefreshKey
     // Start Date:
     // If viewing the past, start simulation from that date to show history/schedule.
     // If viewing the future, start from Today to correctly project the current backlog.
@@ -190,11 +197,12 @@ const TimelineView: React.FC<TimelineViewProps> = ({
     return calculateSchedule(timelineTasks, developers, config, simStartDate, {
       actualOnly: true,
     });
-  }, [tasks, developers, config, tick, currentDate]);
+  }, [tasks, developers, config, refreshKey, currentDate]);
 
   // Planned schedule (full simulation) — only computed when the ghost overlay is toggled on.
   const plannedSchedule = useMemo(() => {
     if (!showPlan) return {} as typeof schedule;
+    void refreshKey; // clock dependency, see scheduleRefreshKey
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
     const viewDate = new Date(currentDate);
@@ -213,7 +221,7 @@ const TimelineView: React.FC<TimelineViewProps> = ({
         (t.task_sessions && t.task_sessions.length > 0),
     );
     return calculateSchedule(timelineTasks, developers, config, simStartDate);
-  }, [showPlan, tasks, developers, config, tick, currentDate]);
+  }, [showPlan, tasks, developers, config, refreshKey, currentDate]);
 
   const timeSlots = useMemo(() => {
     if (expandedHour !== null) {
