@@ -1,4 +1,5 @@
 import {
+  Button,
   Flex,
   Text,
   Box,
@@ -119,15 +120,18 @@ const Header: React.FC<HeaderProps> = ({ onOpenNav }) => {
 
           <Menu placement="bottom-end">
             <MenuButton
-              as={Flex}
-              align="center"
-              gap={3}
+              as={Button}
+              variant="unstyled"
+              aria-label="Account menu"
+              h="auto"
+              display="flex"
+              alignItems="center"
               pl={4}
               ml={2}
               borderLeft="1px solid"
               borderColor="surface.border"
-              cursor="pointer"
-              role="button"
+              borderRadius={0}
+              fontWeight="normal"
             >
               <Flex align="center" gap={3}>
                 <Box textAlign="right" lineHeight="1.2" display={{ base: "none", md: "block" }}>

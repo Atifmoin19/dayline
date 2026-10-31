@@ -1,6 +1,8 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { Suspense, lazy, useCallback, useMemo, useState } from "react";
 import { Task } from "types";
-import TaskDetailModal from "Components/Timeline/TaskDetailModal";
+// Lazy: the task detail modal (and its comments/attachments/links editors) is app-only, so
+// keeping it out of the entry chunk keeps the landing page's first load small.
+const TaskDetailModal = lazy(() => import("Components/Timeline/TaskDetailModal"));
 import { TaskDetailContext } from "Contexts/useTaskDetail";
 
 /**
@@ -20,7 +22,11 @@ export const TaskDetailProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   return (
     <TaskDetailContext.Provider value={value}>
       {children}
-      <TaskDetailModal task={task} isOpen={!!task} onClose={closeTaskDetail} />
+      {task && (
+        <Suspense fallback={null}>
+          <TaskDetailModal task={task} isOpen onClose={closeTaskDetail} />
+        </Suspense>
+      )}
     </TaskDetailContext.Provider>
   );
 };

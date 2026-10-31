@@ -53,6 +53,7 @@ const DemoLauncher = () => {
         variant="link"
         size="sm"
         colorScheme="brand"
+        color="brand.700"
         isDisabled={isLoading}
         onClick={() => launch("developer")}
       >

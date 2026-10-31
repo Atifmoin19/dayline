@@ -29,19 +29,11 @@ export default defineConfig({
     alias: [{ find: "@", replacement: path.resolve(__dirname, "src") }],
   },
   build: {
-    // The single vendor chunk is ~800 kB (~265 kB gzip), mostly Chakra UI + Emotion.
-    chunkSizeWarningLimit: 900,
-    rollupOptions: {
-      output: {
-        // One vendor chunk for all of node_modules: it changes far less often than app code,
-        // so browsers keep it cached across deploys. Finer splits (chakra / redux / react /
-        // rest) formed circular chunk imports that left React undefined at startup in
-        // production builds. Route-level lazy() loading keeps app code split per page.
-        manualChunks(id) {
-          return id.includes("node_modules") ? "vendor" : undefined;
-        },
-      },
-    },
+    // No manualChunks. Hand-made vendor groups formed circular chunk imports that left
+    // React undefined at startup in production (blank page), and a single catch-all vendor
+    // chunk made every page, including the landing page, download app-only code. Rollup's
+    // own splitting follows the lazy() routes and keeps execution order correct.
+    chunkSizeWarningLimit: 700,
   },
   test: {
     environment: "jsdom",

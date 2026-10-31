@@ -10,7 +10,7 @@ import { SUPER_ADMIN_ROLES, APP_HOME } from "Utils/constants";
 // instead of bundled into the single main chunk (which was tripping Vite's 500KB
 // warning). Login is kept eager since it's commonly the first screen an unauthenticated
 // user hits, and is cheap on its own.
-import Login from "Pages/login";
+const Login = lazy(() => import("Pages/login"));
 const Landing = lazy(() => import("Pages/Landing"));
 const Onboarding = lazy(() => import("Pages/onboarding"));
 const Dashboard = lazy(() => import("Pages/dashboard"));
