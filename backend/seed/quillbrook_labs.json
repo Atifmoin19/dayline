@@ -265,7 +265,19 @@
       "due_offset_days": -4,
       "epic_id": "epic-billing",
       "sprint_id": "sprint-14",
-      "subtask_of": null
+      "subtask_of": null,
+      "sessions": [
+        {
+          "days_ago": 4,
+          "at": "11:00",
+          "minutes": 180
+        },
+        {
+          "days_ago": 3,
+          "at": "10:30",
+          "minutes": 120
+        }
+      ]
     },
     {
       "key": "t03",
@@ -281,14 +293,41 @@
       "due_offset_days": 2,
       "epic_id": "epic-billing",
       "sprint_id": "sprint-14",
-      "subtask_of": null
+      "subtask_of": null,
+      "sessions": [
+        {
+          "days_ago": 2,
+          "at": "14:00",
+          "minutes": 120
+        },
+        {
+          "days_ago": 1,
+          "at": "10:30",
+          "minutes": 150
+        },
+        {
+          "from": 0.55
+        }
+      ],
+      "comments": [
+        {
+          "author": "QB0003",
+          "body": "Watch the leap-year case when the billing anchor is the 29th.",
+          "minutes_ago": 200
+        },
+        {
+          "author": "QB0004",
+          "body": "Good catch. Adding it to the edge-date tests.",
+          "minutes_ago": 150
+        }
+      ]
     },
     {
       "key": "t04",
       "ticket_id": "T-10004",
       "task_name": "Proration: unit tests for edge dates",
       "task_description": "Leap years, month-end, same-day switches.",
-      "task_status": "todo",
+      "task_status": "in-progress",
       "task_assigned_to": "QB0005",
       "task_assigned_by": "QB0004",
       "task_priority": "P2",
@@ -297,7 +336,17 @@
       "due_offset_days": 3,
       "epic_id": "epic-billing",
       "sprint_id": "sprint-14",
-      "subtask_of": "t03"
+      "subtask_of": "t03",
+      "due_eod_days": 1,
+      "sessions": [
+        {
+          "from": 0.05,
+          "to": 0.4
+        },
+        {
+          "from": 0.6
+        }
+      ]
     },
     {
       "key": "t05",
@@ -313,7 +362,18 @@
       "due_offset_days": 3,
       "epic_id": "epic-billing",
       "sprint_id": "sprint-14",
-      "subtask_of": "t03"
+      "subtask_of": "t03",
+      "due_eod_days": 1,
+      "sessions": [
+        {
+          "from": 0.0,
+          "to": 0.3
+        },
+        {
+          "from": 0.33,
+          "to": 0.5
+        }
+      ]
     },
     {
       "key": "t06",
@@ -377,14 +437,21 @@
       "due_offset_days": -2,
       "epic_id": null,
       "sprint_id": "sprint-14",
-      "subtask_of": null
+      "subtask_of": null,
+      "sessions": [
+        {
+          "days_ago": 2,
+          "at": "10:00",
+          "minutes": 180
+        }
+      ]
     },
     {
       "key": "t10",
       "ticket_id": "T-10010",
       "task_name": "Upgrade Postgres to 16",
       "task_description": "Staging dry-run, then production with a maintenance window.",
-      "task_status": "todo",
+      "task_status": "in-progress",
       "task_assigned_to": "QB0012",
       "task_assigned_by": "QB0010",
       "task_priority": "P1",
@@ -393,7 +460,12 @@
       "due_offset_days": 6,
       "epic_id": null,
       "sprint_id": "sprint-14",
-      "subtask_of": null
+      "subtask_of": null,
+      "sessions": [
+        {
+          "from": 0.1
+        }
+      ]
     },
     {
       "key": "t11",
@@ -425,14 +497,31 @@
       "due_offset_days": 1,
       "epic_id": null,
       "sprint_id": "sprint-14",
-      "subtask_of": null
+      "subtask_of": null,
+      "due_eod_days": 0,
+      "sessions": [
+        {
+          "from": 0.05,
+          "to": 0.5
+        },
+        {
+          "from": 0.65
+        }
+      ],
+      "comments": [
+        {
+          "author": "QB0011",
+          "body": "Reproduced locally: the test depends on the payment mock's clock. Fix is in review.",
+          "minutes_ago": 45
+        }
+      ]
     },
     {
       "key": "t13",
       "ticket_id": "T-10013",
       "task_name": "Regression plan for billing launch",
       "task_description": "Test matrix covering plans, currencies and tax regions.",
-      "task_status": "todo",
+      "task_status": "on-hold",
       "task_assigned_to": "QB0011",
       "task_assigned_by": "QB0010",
       "task_priority": "P1",
@@ -441,7 +530,21 @@
       "due_offset_days": 12,
       "epic_id": "epic-billing",
       "sprint_id": null,
-      "subtask_of": null
+      "subtask_of": null,
+      "sessions": [
+        {
+          "days_ago": 2,
+          "at": "11:00",
+          "minutes": 60
+        }
+      ],
+      "comments": [
+        {
+          "author": "QB0011",
+          "body": "On hold until the billing launch date is confirmed.",
+          "minutes_ago": 300
+        }
+      ]
     },
     {
       "key": "t14",
@@ -457,7 +560,21 @@
       "due_offset_days": 4,
       "epic_id": "epic-mobile-v2",
       "sprint_id": "sprint-14",
-      "subtask_of": null
+      "subtask_of": null,
+      "sessions": [
+        {
+          "days_ago": 1,
+          "at": "10:30",
+          "minutes": 200
+        },
+        {
+          "from": 0.0,
+          "to": 0.3
+        },
+        {
+          "from": 0.4
+        }
+      ]
     },
     {
       "key": "t15",
@@ -473,14 +590,21 @@
       "due_offset_days": -3,
       "epic_id": "epic-mobile-v2",
       "sprint_id": "sprint-14",
-      "subtask_of": null
+      "subtask_of": null,
+      "sessions": [
+        {
+          "days_ago": 3,
+          "at": "10:00",
+          "minutes": 240
+        }
+      ]
     },
     {
       "key": "t16",
       "ticket_id": "T-10016",
       "task_name": "Offline mode spike",
       "task_description": "Evaluate sync strategies for offline edits; write up findings.",
-      "task_status": "todo",
+      "task_status": "on-hold",
       "task_assigned_to": "QB0007",
       "task_assigned_by": "QB0006",
       "task_priority": "P2",
@@ -489,7 +613,20 @@
       "due_offset_days": 10,
       "epic_id": "epic-mobile-v2",
       "sprint_id": null,
-      "subtask_of": null
+      "subtask_of": null,
+      "sessions": [
+        {
+          "from": 0.1,
+          "to": 0.35
+        }
+      ],
+      "comments": [
+        {
+          "author": "QB0007",
+          "body": "Parking this until Ines shares the interview notes.",
+          "minutes_ago": 60
+        }
+      ]
     },
     {
       "key": "t17",
@@ -512,7 +649,7 @@
       "ticket_id": "T-10018",
       "task_name": "Accessibility audit of onboarding",
       "task_description": "Screen-reader labels, contrast and focus order.",
-      "task_status": "todo",
+      "task_status": "in-progress",
       "task_assigned_to": "QB0008",
       "task_assigned_by": "QB0007",
       "task_priority": "P2",
@@ -521,7 +658,17 @@
       "due_offset_days": 7,
       "epic_id": "epic-mobile-v2",
       "sprint_id": null,
-      "subtask_of": null
+      "subtask_of": null,
+      "sessions": [
+        {
+          "days_ago": 1,
+          "at": "15:00",
+          "minutes": 90
+        },
+        {
+          "from": 0.35
+        }
+      ]
     },
     {
       "key": "t19",
@@ -537,7 +684,14 @@
       "due_offset_days": -5,
       "epic_id": "epic-mobile-v2",
       "sprint_id": null,
-      "subtask_of": null
+      "subtask_of": null,
+      "sessions": [
+        {
+          "days_ago": 5,
+          "at": "11:00",
+          "minutes": 240
+        }
+      ]
     },
     {
       "key": "t20",
@@ -553,14 +707,25 @@
       "due_offset_days": 5,
       "epic_id": "epic-mobile-v2",
       "sprint_id": null,
-      "subtask_of": null
+      "subtask_of": null,
+      "sessions": [
+        {
+          "days_ago": 1,
+          "at": "14:00",
+          "minutes": 120
+        },
+        {
+          "from": 0.05,
+          "to": 0.45
+        }
+      ]
     },
     {
       "key": "t21",
       "ticket_id": "T-10021",
       "task_name": "Q4 platform roadmap review",
       "task_description": "Review priorities with team leads and publish the roadmap.",
-      "task_status": "todo",
+      "task_status": "in-progress",
       "task_assigned_to": "QB0001",
       "task_assigned_by": "QB0001",
       "task_priority": "P1",
@@ -569,7 +734,17 @@
       "due_offset_days": 4,
       "epic_id": null,
       "sprint_id": null,
-      "subtask_of": null
+      "subtask_of": null,
+      "due_eod_days": 0,
+      "sessions": [
+        {
+          "from": 0.1,
+          "to": 0.25
+        },
+        {
+          "from": 0.75
+        }
+      ]
     },
     {
       "key": "t22",
@@ -585,7 +760,23 @@
       "due_offset_days": 3,
       "epic_id": null,
       "sprint_id": null,
-      "subtask_of": null
+      "subtask_of": null,
+      "sessions": [
+        {
+          "from": 0.05,
+          "to": 0.3
+        },
+        {
+          "from": 0.65
+        }
+      ],
+      "comments": [
+        {
+          "author": "QB0001",
+          "body": "Let's close the loop on the final candidate by Friday.",
+          "minutes_ago": 120
+        }
+      ]
     },
     {
       "key": "t23",
@@ -634,6 +825,56 @@
       "epic_id": null,
       "sprint_id": null,
       "subtask_of": null
+    },
+    {
+      "key": "t26",
+      "ticket_id": "T-10026",
+      "task_name": "Bottom navigation: tab bar icons",
+      "task_description": "Export the five tab icons in both themes for the new bottom navigation.",
+      "task_status": "done",
+      "task_assigned_to": "QB0008",
+      "task_assigned_by": "QB0007",
+      "task_priority": "P2",
+      "task_tags": "design,mobile",
+      "task_duration": "02:00",
+      "due_offset_days": 0,
+      "epic_id": "epic-mobile-v2",
+      "sprint_id": "sprint-14",
+      "subtask_of": "t14",
+      "due_eod_days": 0,
+      "sessions": [
+        {
+          "from": 0.0,
+          "to": 0.3
+        }
+      ]
+    },
+    {
+      "key": "t27",
+      "ticket_id": "T-10027",
+      "task_name": "Review proration PR",
+      "task_description": "Code review for the plan-change proration work before it merges.",
+      "task_status": "in-progress",
+      "task_assigned_to": "QB0003",
+      "task_assigned_by": "QB0002",
+      "task_priority": "P1",
+      "task_tags": "review,billing",
+      "task_duration": "02:00",
+      "due_offset_days": 0,
+      "epic_id": "epic-billing",
+      "sprint_id": "sprint-14",
+      "subtask_of": null,
+      "due_eod_days": 0,
+      "sessions": [
+        {
+          "from": 0.1,
+          "to": 0.3
+        },
+        {
+          "from": 0.58
+        }
+      ]
     }
-  ]
+  ],
+  "seed_notes": "sessions: entries with from/to are today's work as fractions of the working day so far (no 'to' = still running); entries with days_ago/at/minutes are earlier days. due_eod_days sets the due date to the end of the working day N days out. All times are in the business timezone."
 }

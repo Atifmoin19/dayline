@@ -58,7 +58,7 @@ def test_demo_creates_full_workspace_and_logs_in_as_manager(client, demo_on, db_
     directory = client.get("/user", headers=h).json()["data"]
     assert len(directory) == 12
     assert {u["emp_department"] for u in directory} == {"Platform", "Mobile", "Quality & Ops"}
-    assert len(task_items(client.get("/tasks", headers=h))) == 25
+    assert len(task_items(client.get("/tasks", headers=h))) == 27
     assert len(client.get("/epics", headers=h).json()["data"]) == 2
     assert len(client.get("/sprints", headers=h).json()["data"]) == 1
 
@@ -79,7 +79,7 @@ def test_two_demos_cannot_see_or_touch_each_other(client, demo_on, db_session):
     ha, hb = bearer(a), bearer(b)
     a_tasks = {t["id"] for t in task_items(client.get("/tasks", headers=ha))}
     b_tasks = {t["id"] for t in task_items(client.get("/tasks", headers=hb))}
-    assert len(a_tasks) == len(b_tasks) == 25
+    assert len(a_tasks) == len(b_tasks) == 27
     assert a_tasks.isdisjoint(b_tasks)
 
     a_users = {u["emp_id"] for u in client.get("/user", headers=ha).json()["data"]}
@@ -222,7 +222,7 @@ def test_expired_workspaces_are_purged_on_next_call(client, demo_on, db_session,
     assert db_session.query(User).filter(User.workspace_id == old_ws).count() == 0
     assert db_session.query(Epic).filter(Epic.workspace_id == old_ws).count() == 0
     assert db_session.query(Sprint).filter(Sprint.workspace_id == old_ws).count() == 0
-    assert db_session.query(Task).count() == 25  # only the new workspace's tasks remain
+    assert db_session.query(Task).count() == 27  # only the new workspace's tasks remain
     assert client.get("/tasks", headers=old_token).status_code == 401
 
 
