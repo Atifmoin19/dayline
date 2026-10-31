@@ -1,6 +1,6 @@
-# TaskBoard — Frontend
+# Dayline — Frontend
 
-React + TypeScript frontend for TaskBoard, a role-based task scheduling / time-tracking app.
+React + TypeScript frontend for Dayline, a role-based task scheduling / time-tracking app.
 Live day-timeline with per-developer work sessions, Jira-style task detail view, org chart,
 and real-time updates over WebSocket.
 
@@ -25,7 +25,7 @@ The API base URL and environment tag come from env vars. Copy the example and ad
 
 ```bash
 cp .env.example .env.local   # gitignored; sets VITE_APP_BASE_URL, VITE_APP_ENV, VITE_BUSINESS_TZ
-npm run dev                  # http://localhost:5173/
+npm run dev                  # http://localhost:5173/ is the landing page, /app the signed-in home
 ```
 
 ## Build

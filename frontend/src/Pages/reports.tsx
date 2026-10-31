@@ -26,6 +26,7 @@ import { avatarColor } from "Utils/avatar";
 import { getPriorityHex } from "Utils/priority";
 import { formatDuration } from "Utils/common";
 import { getLocalDateKey } from "Utils/scheduler";
+import { APP_HOME } from "Utils/constants";
 
 const STATUS_COLORS: Record<string, string> = {
   "in-progress": "#2563eb",
@@ -196,7 +197,7 @@ const ReportsPage: React.FC = () => {
       <Container maxW="container.xl" py={8}>
         <Breadcrumb mb={2}>
           <BreadcrumbItem>
-            <BreadcrumbLink as={Link} to="/">
+            <BreadcrumbLink as={Link} to={APP_HOME}>
               Home
             </BreadcrumbLink>
           </BreadcrumbItem>

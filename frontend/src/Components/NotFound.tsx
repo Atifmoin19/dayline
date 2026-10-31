@@ -1,5 +1,6 @@
 import { Box, Button, Heading, Text, VStack } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
+import { APP_HOME } from "Utils/constants";
 
 /** Catch-all 404 page for unmatched routes (previously rendered blank). */
 const NotFound: React.FC = () => {
@@ -20,7 +21,7 @@ const NotFound: React.FC = () => {
         <Text color="gray.600" fontSize="lg">
           This page doesn't exist.
         </Text>
-        <Button colorScheme="blue" onClick={() => navigate("/")}>
+        <Button colorScheme="blue" onClick={() => navigate(APP_HOME)}>
           Go home
         </Button>
       </VStack>

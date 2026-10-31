@@ -12,7 +12,7 @@ import {
 } from "@chakra-ui/react";
 import { FaUserCircle, FaPowerOff, FaChevronDown, FaRegCheckCircle, FaBars } from "Utils/icons";
 import { useNavigate } from "react-router-dom";
-import { HEADER_HEIGHT } from "Utils/constants";
+import { HEADER_HEIGHT, APP_HOME } from "Utils/constants";
 import { useAppSelector, useAppDispatch } from "app/hooks";
 import { resetStore } from "app/slices/scheduler.slice";
 import { useLogoutMutation } from "Services/user.api";
@@ -81,12 +81,12 @@ const Header: React.FC<HeaderProps> = ({ onOpenNav }) => {
           cursor="pointer"
           role="button"
           tabIndex={0}
-          aria-label="TaskBoard home"
-          onClick={() => navigate("/")}
+          aria-label="Dayline home"
+          onClick={() => navigate(APP_HOME)}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
-              navigate("/");
+              navigate(APP_HOME);
             }
           }}
           _focusVisible={{ outline: "2px solid", outlineColor: "blue.400", outlineOffset: "2px", borderRadius: "md" }}
@@ -104,7 +104,7 @@ const Header: React.FC<HeaderProps> = ({ onOpenNav }) => {
           </Flex>
           <Box lineHeight="1.1">
             <Text fontSize="md" fontWeight={700} color="neutral.900">
-              TaskBoard
+              Dayline
             </Text>
             <Text fontSize="10px" color="neutral.500">
               Enterprise Edition

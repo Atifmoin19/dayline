@@ -31,6 +31,7 @@ import { BRAND_GRADIENT } from "Styles";
 import AuthLayout from "Layouts/AuthLayout";
 import FeatureStoryboard from "Components/Onboarding/FeatureStoryboard";
 import type { OnboardingPreviewResponse } from "types";
+import { APP_HOME } from "Utils/constants";
 
 const STEPS = [
   { title: "Verify" },
@@ -58,7 +59,7 @@ const Onboarding: React.FC = () => {
   const toast = useToast();
 
   const from = (location.state as { from?: { pathname: string; search?: string } } | null)?.from;
-  const redirectTarget = from ? `${from.pathname}${from.search || ""}` : "/";
+  const redirectTarget = from ? `${from.pathname}${from.search || ""}` : APP_HOME;
 
   const { activeStep, setActiveStep } = useSteps({ index: 0, count: STEPS.length });
   const [showStoryboard, setShowStoryboard] = useState(false);
@@ -142,7 +143,7 @@ const Onboarding: React.FC = () => {
       >
         <Box mb={8}>
           <Heading size="lg" color="neutral.900" mb={1}>
-            Welcome to TaskBoard
+            Welcome to Dayline
           </Heading>
           <Text color="neutral.500" fontSize="sm">
             Let's get your account set up.

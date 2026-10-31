@@ -1,7 +1,7 @@
 import { extendTheme } from "@chakra-ui/react";
 
 /**
- * TaskBoard Enterprise design system.
+ * Dayline Enterprise design system.
  *
  * Global rules (enforced here so components can't drift):
  *  - ONE font family everywhere (system sans, no remote load — CSP safe).

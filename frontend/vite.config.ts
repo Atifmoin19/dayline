@@ -29,39 +29,16 @@ export default defineConfig({
     alias: [{ find: "@", replacement: path.resolve(__dirname, "src") }],
   },
   build: {
+    // The single vendor chunk is ~800 kB (~265 kB gzip), mostly Chakra UI + Emotion.
+    chunkSizeWarningLimit: 900,
     rollupOptions: {
       output: {
-        // Route-level lazy() splitting (see AppRouter.tsx) got the main chunk down from
-        // ~984KB to ~810KB, but it's still over Vite's 500KB warning threshold — the bulk
-        // of what's left is third-party vendor code that nearly every route depends on
-        // (Chakra UI + Emotion + the framer-motion animations Chakra pulls in, Redux/RTK
-        // Query, React Router) rather than app code that route-splitting can move. Grouping
-        // those into their own vendor chunks gets each piece under the threshold and lets
-        // browsers cache them separately from app code that changes far more often.
+        // One vendor chunk for all of node_modules: it changes far less often than app code,
+        // so browsers keep it cached across deploys. Finer splits (chakra / redux / react /
+        // rest) formed circular chunk imports that left React undefined at startup in
+        // production builds. Route-level lazy() loading keeps app code split per page.
         manualChunks(id) {
-          if (!id.includes("node_modules")) return undefined;
-          if (
-            id.includes("@chakra-ui") ||
-            id.includes("@emotion") ||
-            id.includes("framer-motion")
-          ) {
-            return "vendor-chakra";
-          }
-          if (
-            id.includes("react-redux") ||
-            id.includes("@reduxjs") ||
-            id.includes("redux-persist")
-          ) {
-            return "vendor-redux";
-          }
-          if (
-            id.includes("/react/") ||
-            id.includes("/react-dom/") ||
-            id.includes("react-router")
-          ) {
-            return "vendor-react";
-          }
-          return "vendor";
+          return id.includes("node_modules") ? "vendor" : undefined;
         },
       },
     },

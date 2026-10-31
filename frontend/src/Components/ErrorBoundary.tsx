@@ -1,5 +1,6 @@
 import React from "react";
 import { Box, Button, Heading, Text, VStack } from "@chakra-ui/react";
+import { APP_HOME } from "Utils/constants";
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -34,7 +35,7 @@ class ErrorBoundary extends React.Component<
 
   handleReset = () => {
     this.setState({ hasError: false, error: undefined });
-    window.location.href = "/";
+    window.location.href = APP_HOME;
   };
 
   render() {

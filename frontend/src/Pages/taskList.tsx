@@ -19,7 +19,7 @@ import { useTaskDetail } from "Contexts/useTaskDetail";
 import { useTaskListQuery } from "Services/user.api";
 import { useAppDispatch, useAppSelector } from "app/hooks";
 import { addTask } from "app/slices/scheduler.slice";
-import { ADMIN_ROLES, SUPER_ADMIN_ROLES } from "Utils/constants";
+import { ADMIN_ROLES, SUPER_ADMIN_ROLES, APP_HOME } from "Utils/constants";
 import { FaChartBar } from "Utils/icons";
 
 const TaskListPage: React.FC = () => {
@@ -83,7 +83,7 @@ const TaskListPage: React.FC = () => {
           <Box>
             <Breadcrumb>
               <BreadcrumbItem>
-                <BreadcrumbLink as={Link} to="/">
+                <BreadcrumbLink as={Link} to={APP_HOME}>
                   Home
                 </BreadcrumbLink>
               </BreadcrumbItem>
@@ -119,7 +119,7 @@ const TaskListPage: React.FC = () => {
             <Button
               leftIcon={<FaChartBar />}
               colorScheme="blue"
-              onClick={() => navigate("/")}
+              onClick={() => navigate(APP_HOME)}
               boxShadow="lg"
             >
               View Timeline

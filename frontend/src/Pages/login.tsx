@@ -22,7 +22,7 @@ import {
 } from "Services/user.api";
 import { getApiErrorMessage } from "Services/baseQuery";
 import { BRAND_GRADIENT } from "Styles";
-import { BASE_URL, DEMO_ENABLED } from "Utils/constants";
+import { BASE_URL, DEMO_ENABLED, APP_HOME } from "Utils/constants";
 import AuthLayout from "Layouts/AuthLayout";
 import DemoLauncher from "Components/Demo/DemoLauncher";
 
@@ -34,7 +34,7 @@ const Login: React.FC = () => {
   // Where an unauthenticated visit was redirected from (ProtectedRoute), e.g. a shared task link
   // — so login/signup lands back on the thing they actually opened, not always the dashboard.
   const from = (location.state as { from?: { pathname: string; search?: string } } | null)?.from;
-  const redirectTarget = from ? `${from.pathname}${from.search || ""}` : "/";
+  const redirectTarget = from ? `${from.pathname}${from.search || ""}` : APP_HOME;
   const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
   const [login, { isLoading }] = useLoginMutation();
@@ -135,7 +135,7 @@ const Login: React.FC = () => {
               <Icon as={FaRegCheckCircle} boxSize={5} />
             </Flex>
             <Box lineHeight="1.1">
-              <Text fontSize="lg" fontWeight={700} color="white">TaskBoard</Text>
+              <Text fontSize="lg" fontWeight={700} color="white">Dayline</Text>
               <Text fontSize="xs" color="whiteAlpha.800">Enterprise Edition</Text>
             </Box>
           </Flex>
@@ -252,7 +252,7 @@ const Login: React.FC = () => {
 
           <Flex justify="center" align="center" gap={1} mt={6}>
             <Text fontSize="sm" color="neutral.500">
-              New to TaskBoard?
+              New to Dayline?
             </Text>
             <Button
               as={RouterLink}

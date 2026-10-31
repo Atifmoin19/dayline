@@ -37,6 +37,7 @@ import {
   groupRowsByTimezone,
   heatmapColor,
 } from "Utils/capacity";
+import { APP_HOME } from "Utils/constants";
 
 const StatCard: React.FC<{ label: string; value: string | number; color?: string }> = ({
   label,
@@ -177,7 +178,7 @@ const OrganizationResourceView: React.FC = () => {
       <Container maxW="container.xl" py={8}>
         <Breadcrumb mb={2}>
           <BreadcrumbItem>
-            <BreadcrumbLink as={Link} to="/">
+            <BreadcrumbLink as={Link} to={APP_HOME}>
               Home
             </BreadcrumbLink>
           </BreadcrumbItem>

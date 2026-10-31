@@ -1,5 +1,10 @@
 export const APP_ENV = import.meta.env.VITE_APP_ENV ?? "";
 export const BASE_URL = import.meta.env.VITE_APP_BASE_URL ?? "";
+/** Signed-in home ("My Work"). "/" is the public landing page. */
+export const APP_HOME = "/app";
+/** Landing-page footer links. */
+export const GITHUB_URL = import.meta.env.VITE_GITHUB_URL || "https://github.com/Atifmoin19";
+export const PORTFOLIO_URL = "https://portfolio.fullstackcity.in";
 /** Show "Try the demo" on the login page (the backend must also set DEMO_MODE_ENABLED=true). */
 export const DEMO_ENABLED = import.meta.env.VITE_DEMO_ENABLED === "true";
 

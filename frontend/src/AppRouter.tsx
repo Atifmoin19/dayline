@@ -2,17 +2,16 @@ import React, { Suspense, lazy } from "react";
 import { Flex, Spinner, Text } from "@chakra-ui/react";
 import { Route, Routes, useLocation } from "react-router-dom";
 
-import { useAppSelector } from "app/hooks";
-import { Navigate, Outlet } from "react-router-dom";
+import { ProtectedRoute, RoleProtectedRoute } from "Components/RouteGuards";
 import NotFound from "Components/NotFound";
-import { SUPER_ADMIN_ROLES } from "Utils/constants";
+import { SUPER_ADMIN_ROLES, APP_HOME } from "Utils/constants";
 
 // Route-level code-splitting: each page becomes its own chunk, fetched on navigation
 // instead of bundled into the single main chunk (which was tripping Vite's 500KB
 // warning). Login is kept eager since it's commonly the first screen an unauthenticated
 // user hits, and is cheap on its own.
 import Login from "Pages/login";
-import { useUserDirectorySync } from "hooks/useUserDirectorySync";
+const Landing = lazy(() => import("Pages/Landing"));
 const Onboarding = lazy(() => import("Pages/onboarding"));
 const Dashboard = lazy(() => import("Pages/dashboard"));
 const TaskListPage = lazy(() => import("Pages/taskList"));
@@ -50,28 +49,6 @@ const RouteLoadingFallback: React.FC = () => (
   </Flex>
 );
 
-const ProtectedRoute = () => {
-  const { currentUser } = useAppSelector((state) => state.scheduler);
-  const location = useLocation();
-  useUserDirectorySync(); // one directory fetch for every authed route, deep links included
-  return currentUser ? (
-    <Outlet />
-  ) : (
-    <Navigate to="/login" state={{ from: location }} replace />
-  );
-};
-
-const RoleProtectedRoute = ({ allowedRoles }: { allowedRoles: string[] }) => {
-  const { currentUser } = useAppSelector((state) => state.scheduler);
-  if (!currentUser) return <Navigate to="/login" replace />;
-
-  if (!allowedRoles.includes(currentUser.emp_designation)) {
-    return <Navigate to="/" replace />; // Redirect to basic dashboard if not authorized
-  }
-
-  return <Outlet />;
-};
-
 function StandardRoutes() {
   const location = useLocation();
 
@@ -82,13 +59,14 @@ function StandardRoutes() {
     // a matched *page* chunk (lazy-loaded below) is being fetched.
     <Suspense fallback={<RouteLoadingFallback />}>
       <Routes location={location} key={location.pathname}>
+        {/* Public landing page; signed-in users see it too, with an "Open app" button. */}
+        <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/onboarding" element={<Onboarding />} />
 
         {/* Basic authenticated routes */}
         <Route element={<ProtectedRoute />}>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="" element={<Dashboard />} />
+          <Route path={APP_HOME} element={<Dashboard />} />
           <Route path="/task-list" element={<TaskListPage />} />
           <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
           <Route path="/profile" element={<ProfilePage />} />

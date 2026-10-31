@@ -16,7 +16,7 @@ import {
 import { IconType } from "react-icons";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAppSelector } from "app/hooks";
-import { SUPER_ADMIN_ROLES, ADMIN_ROLES, HEADER_HEIGHT, SIDEBAR_WIDTH } from "Utils/constants";
+import { SUPER_ADMIN_ROLES, ADMIN_ROLES, HEADER_HEIGHT, SIDEBAR_WIDTH, APP_HOME } from "Utils/constants";
 import { BRAND_GRADIENT, BRAND_GLOW, BRAND_GLOW_HOVER } from "Styles";
 
 interface NavItem {
@@ -49,7 +49,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onCreateTask, variant = "fixed", onNa
   // Primary nav. (Task List / Profile removed — List is a dashboard view toggle, Profile
   // lives in the header menu.)
   const primary: NavItem[] = [
-    { label: "My Work", to: "/", icon: FaThLarge },
+    { label: "My Work", to: APP_HOME, icon: FaThLarge },
     { label: "Organization", to: "/organization", icon: FaSitemap },
     // Company-wide, open to everyone (viewing AND creating) — same tier as My Work/Organization,
     // not under Administration below.
@@ -80,7 +80,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onCreateTask, variant = "fixed", onNa
     : [];
 
   const isActive = (to: string) =>
-    to === "/" ? location.pathname === "/" : location.pathname.startsWith(to);
+    to === APP_HOME ? location.pathname === APP_HOME : location.pathname.startsWith(to);
 
   const NavRow = ({ item }: { item: NavItem }) => {
     const active = isActive(item.to);

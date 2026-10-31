@@ -52,7 +52,7 @@ describe("DemoLauncher", () => {
     expect(s.token).toBe("tok");
     expect(s.currentUser?.is_demo).toBe(true);
     expect(s.currentUser?.demo_expires_at).toBe("2026-03-12T05:00:00Z");
-    expect(navigate).toHaveBeenCalledWith("/", { replace: true });
+    expect(navigate).toHaveBeenCalledWith("/app", { replace: true });
   });
 
   it("offers the developer persona", async () => {
