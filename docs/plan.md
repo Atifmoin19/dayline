@@ -1,4 +1,4 @@
-# TaskAutomation — Feature Inventory (`plan.md`)
+# TaskBoard — Feature Inventory (`plan.md`)
 
 What the app does **today**. Snapshot after full audit of frontend + backend on 2026-07-25,
 updated 2026-07-26 for the task-detail-view + open-assignment + modal-redesign round, and again
@@ -14,7 +14,7 @@ Role-based task scheduling / time-tracking app for an engineering org. Managers 
 
 ### Tech Stack
 
-**Frontend** — `TaskAutomation-main/`
+**Frontend** — `frontend/`
 - React 19.1 + TypeScript ~5.9, Vite 5.4 (modes `dev` / `localback`)
 - Chakra UI v2.10 + Emotion
 - Redux Toolkit 2.2 + **RTK Query** over a **custom axios base query** (`Services/baseQuery.ts`)
@@ -22,7 +22,7 @@ Role-based task scheduling / time-tracking app for an engineering org. Managers 
 - react-router-dom v7.9, basename `/`
 - framer-motion (largely unused), react-icons, axios
 
-**Backend** — `TaskAutomationBackend-main/`
+**Backend** — `backend/`
 - FastAPI + Uvicorn, SQLAlchemy 2, Pydantic v2
 - PostgreSQL (SQLite fallback if `DATABASE_URL` unset), Redis (pinged at startup but **not actually used**)
 - Docker Compose (backend + Postgres + Redis + pgAdmin), root path mounted at `/api`

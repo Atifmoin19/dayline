@@ -305,7 +305,7 @@ export interface UserListParams {
 export type TaskCreatePayload = Partial<Task>;
 
 // GET /capacity — per-employee next-48h capacity/utilization (org-tree scoped). See
-// TaskAutomationBackend-main/main.py's _capacity_for_employee for the exact derivation.
+// backend/main.py's _capacity_for_employee for the exact derivation.
 export type CapacityStatus = "available" | "at_capacity" | "over_capacitated";
 
 export interface CapacityDay {
@@ -386,7 +386,7 @@ export interface InsightsResponse {
 // modal's "who should I assign this to?" shortcut. Deterministic by default; supplying a
 // `description` triggers an optional server-side Gemini domain-classification pass, whose
 // match can surface as an extra entry in `reasons` (e.g. "Skills match: React, TypeScript").
-// See TaskAutomationBackend-main/main.py's get_assignee_suggestions for the exact scoring.
+// See backend/main.py's get_assignee_suggestions for the exact scoring.
 export interface AssigneeSuggestion {
     emp_id: string;
     emp_name: string;

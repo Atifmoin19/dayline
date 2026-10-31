@@ -1,4 +1,4 @@
-# TaskAutomation — Pending Work (`pending.md`)
+# TaskBoard — Pending Work (`pending.md`)
 
 **Only open work lives here.** Everything shipped — P0 security foundation, P1 robustness, the
 P1.5 UI redesign (incl. the SuperAdmin restyle), the timeline actual-history redesign + all its
@@ -71,7 +71,7 @@ creation + progress rollup** (the former deferred multi-assignee ask, resolved b
    `GEMINI_MODEL` (optional, powers both `GET /insights` and its risk/rebalance fields — dev
    `.env` now has real keys, reused from another internal service's config, same pattern as this app's
    Mandrill SMTP keys; prod needs its own set the same way). See
-   `TaskAutomationBackend-main/.env.example` for the full current list.
+   `backend/.env.example` for the full current list.
 3. `python seed_demo.py` (dry run) → `--yes` — **wipes** old users/tasks and loads
    the 12 fictional demo users from `seed/quillbrook_labs.json`. Default password `ChangeMe123!`.
 4. Prod needs Redis running as real infrastructure now (Celery broker/backend, not just a startup

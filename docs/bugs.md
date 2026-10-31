@@ -1,4 +1,4 @@
-# TaskAutomation — Bugs & Glitches (`bugs.md`)
+# TaskBoard — Bugs & Glitches (`bugs.md`)
 
 Issues in the codebase, grouped by severity/type. Audited 2026-07-25. **Fix pass 2026-07-25.**
 

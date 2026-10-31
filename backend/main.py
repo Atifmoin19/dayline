@@ -2594,7 +2594,7 @@ _ASSIGNEE_DOMAIN_CACHE_PREFIX = "assignee_domain:"
 
 def _split_tags(raw: str | None) -> list:
     """`task_tags` (and this endpoint's `tags` query param) is a plain comma-separated
-    string — matches the frontend's chip editor (TaskAutomation-main/src/Components/
+    string — matches the frontend's chip editor (frontend/src/Components/
     Timeline/TagsInput.tsx: tags are joined/split on "," with each chip trimmed). Splits,
     trims, lowercases (so matching is case-insensitive — the UI capitalizes chips for
     display only), and drops empties."""
