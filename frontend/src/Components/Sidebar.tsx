@@ -42,7 +42,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onCreateTask, variant = "fixed", onNa
   const { currentUser } = useAppSelector((state) => state.scheduler);
 
   const designation = currentUser?.emp_designation || "";
-  const isSuperAdmin = SUPER_ADMIN_ROLES.includes(designation);
+  // Demo workspaces have no admin features (the backend refuses them), so hide that section.
+  const isSuperAdmin = !currentUser?.is_demo && SUPER_ADMIN_ROLES.includes(designation);
   const isManagement = isSuperAdmin || ADMIN_ROLES.includes(designation);
 
   // Primary nav. (Task List / Profile removed — List is a dashboard view toggle, Profile

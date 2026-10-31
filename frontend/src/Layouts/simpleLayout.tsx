@@ -16,6 +16,7 @@ import TaskCreationModal from "Components/Timeline/TaskCreationModal";
 import { BRAND_GRADIENT, BRAND_GLOW, BRAND_GLOW_HOVER } from "Styles";
 import { HEADER_HEIGHT, SIDEBAR_WIDTH } from "Utils/constants";
 import { useRealtimeSync } from "hooks/useRealtimeSync";
+import DemoBanner from "Components/Demo/DemoBanner";
 
 interface ISimpleLayout {
   hasStripTransition?: boolean;
@@ -66,6 +67,7 @@ const SimpleLayout: React.FC<ISimpleLayout> = ({ children, hideSidebar }) => {
         py={6}
         minW={0}
       >
+        <DemoBanner />
         {children}
       </Box>
 

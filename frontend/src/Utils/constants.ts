@@ -1,5 +1,7 @@
 export const APP_ENV = import.meta.env.VITE_APP_ENV ?? "";
 export const BASE_URL = import.meta.env.VITE_APP_BASE_URL ?? "";
+/** Show "Try the demo" on the login page (the backend must also set DEMO_MODE_ENABLED=true). */
+export const DEMO_ENABLED = import.meta.env.VITE_DEMO_ENABLED === "true";
 
 export const HEADER_HEIGHT = "3.6rem";
 

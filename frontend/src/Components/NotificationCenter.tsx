@@ -220,7 +220,7 @@ const NotificationCenter: React.FC = () => {
               )}
 
               {/* Row 3 — Browser push toggle (only if the browser supports it) */}
-              {push.supported && push.permission !== "denied" && (
+              {push.supported && push.permission !== "denied" && !currentUser?.is_demo && (
                 <Flex
                   px={4}
                   py={2.5}

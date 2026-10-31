@@ -10,6 +10,8 @@ export interface Employee {
     emp_department?: string;
     emp_hierarchy?: string;
     manager_id?: string; // emp_id of the manager
+    is_demo?: boolean; // signed in to a POST /demo sandbox workspace
+    demo_expires_at?: string; // ISO time that sandbox is purged (frontend-only, from POST /demo)
     avatar?: string; // Optional frontend prop (legacy)
     // Enriched HRIS profile
     node_id?: string;
@@ -190,6 +192,12 @@ export type TaskListResponse = Task[] | PaginatedTasks;
 export interface AuthResponse {
     token: string;
     userData: Employee;
+}
+
+export type DemoPersona = "manager" | "developer";
+
+export interface DemoResponse extends AuthResponse {
+    demo: { workspace_id: string; persona: DemoPersona; expires_at: string };
 }
 
 export interface UploadResult {

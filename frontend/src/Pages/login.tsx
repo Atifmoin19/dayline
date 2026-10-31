@@ -22,8 +22,9 @@ import {
 } from "Services/user.api";
 import { getApiErrorMessage } from "Services/baseQuery";
 import { BRAND_GRADIENT } from "Styles";
-import { BASE_URL } from "Utils/constants";
+import { BASE_URL, DEMO_ENABLED } from "Utils/constants";
 import AuthLayout from "Layouts/AuthLayout";
+import DemoLauncher from "Components/Demo/DemoLauncher";
 
 const Login: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -235,6 +236,19 @@ const Login: React.FC = () => {
               </>
             )}
           </VStack>
+
+          {DEMO_ENABLED && (
+            <VStack spacing={3} mt={5} align="stretch">
+              <Flex align="center" gap={3}>
+                <Box flex="1" h="1px" bg="neutral.200" />
+                <Text fontSize="xs" color="neutral.400">
+                  NO ACCOUNT?
+                </Text>
+                <Box flex="1" h="1px" bg="neutral.200" />
+              </Flex>
+              <DemoLauncher />
+            </VStack>
+          )}
 
           <Flex justify="center" align="center" gap={1} mt={6}>
             <Text fontSize="sm" color="neutral.500">

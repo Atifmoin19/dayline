@@ -8,6 +8,8 @@ import type {
   UserListParams,
   TaskCreatePayload,
   AuthResponse,
+  DemoPersona,
+  DemoResponse,
   LoginPayload,
   RegisterPayload,
   UploadResult,
@@ -192,6 +194,10 @@ export const userApi = createApi({
         body,
       }),
       invalidatesTags: ["Link", "Task"],
+    }),
+    // Public. 404 unless the backend runs with DEMO_MODE_ENABLED=true.
+    startDemo: builder.mutation<DemoResponse, { persona: DemoPersona }>({
+      query: (body) => ({ url: "/demo", method: "POST", body }),
     }),
     login: builder.mutation<AuthResponse, LoginPayload>({
       query: (body) => ({
@@ -408,4 +414,4 @@ export const userApi = createApi({
   }),
 });
 
-export const { useUserListQuery, useLazyUserListQuery, useLazyTaskListQuery, useTaskListQuery, useCreateTaskMutation, useUpdateTaskMutation, useDeleteTaskMutation, useDeleteTaskSessionMutation, useEditTaskSessionMutation, useSplitTaskSessionMutation, useTaskCommentsQuery, useAddCommentMutation, useDeleteCommentMutation, useTaskAttachmentsQuery, useAddTaskAttachmentMutation, useDeleteTaskAttachmentMutation, useNotificationsQuery, useMarkNotificationReadMutation, useMarkAllNotificationsReadMutation, useTaskLinksQuery, useAddTaskLinkMutation, useDeleteTaskLinkMutation, useAddSubtaskMutation, useLazyGetUserQuery, useLoginMutation, useSsoStatusQuery, useLazyAuthMeQuery, useAuditLogQuery, useLogoutMutation, useCreateUserMutation, useUploadTasksMutation, useUploadUsersMutation, useUpdateUserMutation, useUpdateProfileMutation, useRegisterMutation, useDeleteUserMutation, useBulkDeleteUsersMutation, useLazyVapidPublicKeyQuery, useSubscribePushMutation, useUnsubscribePushMutation, useCapacityQuery, useInsightsQuery, useAssigneeSuggestionsQuery, useEpicListQuery, useGetEpicQuery, useCreateEpicMutation, useUpdateEpicMutation, useDeleteEpicMutation, useTaskGraphQuery, useSprintListQuery, useGetSprintQuery, useCreateSprintMutation, useUpdateSprintMutation, useDeleteSprintMutation, useSprintBurndownQuery, usePreviewOnboardingMutation, useEmployeeOverviewQuery } = userApi;
+export const { useStartDemoMutation, useUserListQuery, useLazyUserListQuery, useLazyTaskListQuery, useTaskListQuery, useCreateTaskMutation, useUpdateTaskMutation, useDeleteTaskMutation, useDeleteTaskSessionMutation, useEditTaskSessionMutation, useSplitTaskSessionMutation, useTaskCommentsQuery, useAddCommentMutation, useDeleteCommentMutation, useTaskAttachmentsQuery, useAddTaskAttachmentMutation, useDeleteTaskAttachmentMutation, useNotificationsQuery, useMarkNotificationReadMutation, useMarkAllNotificationsReadMutation, useTaskLinksQuery, useAddTaskLinkMutation, useDeleteTaskLinkMutation, useAddSubtaskMutation, useLazyGetUserQuery, useLoginMutation, useSsoStatusQuery, useLazyAuthMeQuery, useAuditLogQuery, useLogoutMutation, useCreateUserMutation, useUploadTasksMutation, useUploadUsersMutation, useUpdateUserMutation, useUpdateProfileMutation, useRegisterMutation, useDeleteUserMutation, useBulkDeleteUsersMutation, useLazyVapidPublicKeyQuery, useSubscribePushMutation, useUnsubscribePushMutation, useCapacityQuery, useInsightsQuery, useAssigneeSuggestionsQuery, useEpicListQuery, useGetEpicQuery, useCreateEpicMutation, useUpdateEpicMutation, useDeleteEpicMutation, useTaskGraphQuery, useSprintListQuery, useGetSprintQuery, useCreateSprintMutation, useUpdateSprintMutation, useDeleteSprintMutation, useSprintBurndownQuery, usePreviewOnboardingMutation, useEmployeeOverviewQuery } = userApi;
