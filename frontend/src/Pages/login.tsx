@@ -24,7 +24,7 @@ import { getApiErrorMessage } from "Services/baseQuery";
 import { BRAND_GRADIENT } from "Styles";
 import { BASE_URL, DEMO_ENABLED, APP_HOME } from "Utils/constants";
 import AuthLayout from "Layouts/AuthLayout";
-import DemoLauncher from "Components/Demo/DemoLauncher";
+import DemoPersonaPicker from "Components/Demo/DemoPersonaPicker";
 
 const Login: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -168,12 +168,25 @@ const Login: React.FC = () => {
 
         {/* Right — form */}
         <Flex flex="1" direction="column" justify="center" p={{ base: 8, md: 12 }}>
-          <Box mb={8}>
-            <Heading size="lg" color="neutral.900" mb={1}>
-              Welcome back
+          {DEMO_ENABLED && (
+            <>
+              <DemoPersonaPicker />
+              <Flex align="center" gap={3} my={6}>
+                <Box flex="1" h="1px" bg="neutral.200" />
+                <Text fontSize="xs" color="neutral.400">
+                  ALREADY INVITED?
+                </Text>
+                <Box flex="1" h="1px" bg="neutral.200" />
+              </Flex>
+            </>
+          )}
+
+          <Box mb={DEMO_ENABLED ? 4 : 8}>
+            <Heading as="h2" size={DEMO_ENABLED ? "md" : "lg"} color="neutral.900" mb={1}>
+              Sign in (for invited teams)
             </Heading>
             <Text color="neutral.500" fontSize="sm">
-              Sign in to access your workspace.
+              Use the employee ID and password your admin set up for you.
             </Text>
           </Box>
 
@@ -237,33 +250,19 @@ const Login: React.FC = () => {
             )}
           </VStack>
 
-          {DEMO_ENABLED && (
-            <VStack spacing={3} mt={5} align="stretch">
-              <Flex align="center" gap={3}>
-                <Box flex="1" h="1px" bg="neutral.200" />
-                <Text fontSize="xs" color="neutral.400">
-                  NO ACCOUNT?
-                </Text>
-                <Box flex="1" h="1px" bg="neutral.200" />
-              </Flex>
-              <DemoLauncher />
-            </VStack>
-          )}
-
-          <Flex justify="center" align="center" gap={1} mt={6}>
+          <Flex justify="center" align="center" gap={1} mt={6} wrap="wrap">
             <Text fontSize="sm" color="neutral.500">
-              New to Dayline?
+              Want Dayline for your team?
             </Text>
             <Button
               as={RouterLink}
-              to="/onboarding"
-              state={location.state}
+              to="/request-workspace"
               variant="link"
               colorScheme="brand"
               fontWeight={700}
               fontSize="sm"
             >
-              Get started
+              Request a workspace
             </Button>
           </Flex>
         </Flex>

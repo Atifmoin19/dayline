@@ -55,12 +55,12 @@ describe("DemoLauncher", () => {
     expect(navigate).toHaveBeenCalledWith("/app", { replace: true });
   });
 
-  it("offers the developer persona", async () => {
+  it("offers an employee persona", async () => {
     const { trigger } = setup();
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /as a developer/i }));
+      fireEvent.click(screen.getByRole("button", { name: /as an employee/i }));
     });
-    expect(trigger).toHaveBeenCalledWith({ persona: "developer" });
+    expect(trigger).toHaveBeenCalledWith({ persona: "employee_1" });
   });
 
   it("says the server is waking up when the request is slow", () => {

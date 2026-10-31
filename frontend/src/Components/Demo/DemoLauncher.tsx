@@ -2,7 +2,7 @@ import { Button, Flex, Text } from "@chakra-ui/react";
 import { useDemoLaunch } from "hooks/useDemoLaunch";
 import { BRAND_GLOW } from "Styles";
 
-/** "Try the demo": a manager demo by default, with a link to the developer persona. */
+/** "Try the demo": a manager demo by default, with a link to an employee persona. */
 const DemoLauncher = ({ tone = "outline" }: { tone?: "outline" | "solid" }) => {
   const { launch, isLoading, waking } = useDemoLaunch();
 
@@ -30,9 +30,9 @@ const DemoLauncher = ({ tone = "outline" }: { tone?: "outline" | "solid" }) => {
         colorScheme="brand"
         color={tone === "solid" ? "inherit" : "brand.700"}
         isDisabled={isLoading}
-        onClick={() => launch("developer")}
+        onClick={() => launch("employee_1")}
       >
-        or explore as a developer
+        or explore as an employee
       </Button>
       {waking && (
         <Text fontSize="xs" color={tone === "solid" ? "inherit" : "neutral.500"} role="status">
