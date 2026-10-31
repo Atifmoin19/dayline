@@ -4,7 +4,7 @@ Issues in the codebase, grouped by severity/type. Audited 2026-07-25. **Fix pass
 
 **Status legend:** ✅ fixed · 🟡 partial · ⬜ open (tracked in `pending.md`)
 
-**Summary:** after fix passes + full P0/P1 work, the large majority are fixed. Still open (⬜): S5 open self-registration, `getAssignee` deep-link, SQLite silent fallback, docker-compose dev config, branding, README, scheduler `as any`, TimelineView 60-day re-sim, pending-modal race, secrets file cleanup (your action). 🟡 partial: committed-secrets (DB hashed, files remain), sweeper race.
+**Summary:** after fix passes + full P0/P1 work and the 2026-10-31 revive pass, the large majority are fixed. Still open (⬜): S5 open self-registration, docker-compose dev config, README depth, scheduler `as any`. 🟡 partial: sweeper race.
 
 ---
 
@@ -13,7 +13,7 @@ Issues in the codebase, grouped by severity/type. Audited 2026-07-25. **Fix pass
 | # | Status | Issue | Location |
 |---|--------|-------|----------|
 | S1 | ✅ | **Plaintext passwords** — now bcrypt-hashed (`security.py`); login verifies + auto-upgrades legacy plaintext. Existing rows migrated (`hash_existing_passwords.py`), all reset to hashed default. | `main.py` login/register/create/upload |
-| S2 | 🟡 | **Committed secrets** — DB passwords now hashed + rotated to default. Still present as plaintext: `foundation.csv`, `users.csv`, `.env` (DB pwd), `automation_dev.db`. **You must delete/gitignore + rotate these files.** | repo root |
+| S2 | ✅ | **Committed secrets** — this repo was re-imported clean: no `foundation.csv`, `users.csv`, `.env` or `*.db` files, and `.gitignore` blocks them. Any credentials that lived in the old repository must still be treated as leaked and rotated there. | repo root |
 | S3 | ✅ | **Unauthenticated user endpoints** — all now require a token; mutations require admin (`require_admin`, rank ≥ L2). | `main.py` `/user*` |
 | S4 | ✅ | **No authz on task delete** — now checks assignee/assigner/admin/manager-in-scope. | `main.py` `delete_task` |
 | S5 | ⬜ | **Open self-registration** — anyone can still register from the login screen. Needs invite/admin gating. | `login.tsx:44-71` |
@@ -35,7 +35,7 @@ Issues in the codebase, grouped by severity/type. Audited 2026-07-25. **Fix pass
 - ✅ **Role mismatch** — `OWNER`/`SUPERADMIN` added to `SUPER_ADMIN_ROLES`. — `constants.ts`
 - ✅ **Unknown designation → empty user table** — empty-state message added. — `UserManagementPage.tsx`
 - ✅ **Wrong sample CSV for tasks** — new `sample_task_creation.csv` asset. — `CreateTaskPage.tsx`
-- ⬜ **`getAssignee` deep-link "Unassigned"** — still depends on parent-populated Redux `developers`. Tied to two-sources-of-truth. → `pending.md` P1.
+- ✅ **`getAssignee` deep-link "Unassigned"** — the directory is now loaded once for every authed route by `useUserDirectorySync` (mounted in `ProtectedRoute`); pages no longer fetch it themselves. — `hooks/useUserDirectorySync.ts`, `AppRouter.tsx`
 
 ---
 
@@ -57,14 +57,14 @@ Issues in the codebase, grouped by severity/type. Audited 2026-07-25. **Fix pass
 - ✅ **Commented decrypt block + `baseUrl` comment** in `baseQuery.ts` — removed.
 - ✅ **Dead `localStorage["timeline_view_date"]` write** — removed.
 - ✅ **`console.log` in prod paths** — removed (dashboard, baseQuery, login, modal).
-- ⬜ **Branding inconsistency** — "DevScheduler" vs "TaskBoard" vs the old base-path name. → `pending.md` P3.
+- ✅ **Branding inconsistency** — one name, "TaskBoard", across UI, docs, comments and tests (final product name TBD).
 
 ---
 
 ## 🔵 Backend Structure / Ops
 
 - ✅ **No migration framework** — Alembic scaffolded + baseline stamped; the 11 ad-hoc scripts moved to `legacy_migrations/` (with `fix_schema.py` already guarded). Schema changes now go through `alembic revision`/`upgrade`.
-- ⬜ **SQLite silently used** if `DATABASE_URL` unset — no warning. → `pending.md` P1.
+- ✅ **SQLite silently used** if `DATABASE_URL` unset — `models.resolve_database_url` now logs a warning, and refuses SQLite outright when `ENVIRONMENT=production` (Alembic uses the same resolver). — `models.py`, `tests/test_database_url.py`
 - ✅ **Redis pinged but unused** — now the primary session store (sliding-TTL sessions), with a cached client.
 - ⬜ **docker-compose ships dev config** — bind-mount/`--reload`, default pgAdmin creds, hardcoded pwd. → `pending.md` P3.
 - ✅ **Bare `except:`** in `remaining_seconds` — narrowed to `(ValueError, TypeError)`. — `models.py`
@@ -79,14 +79,14 @@ Issues in the codebase, grouped by severity/type. Audited 2026-07-25. **Fix pass
 ## ⚡ Performance
 
 - ✅ **`Header.pendingCount`** — memoized (`useMemo` on tasks/currentUser/config).
-- ⬜ **`TimelineView` 60-day `calculateSchedule`** reruns every tick/change. → `pending.md` P2 (WebSocket / incremental).
-- ⬜ **Pending-modal "show once" race** — load-after-paint can skip auto-open. → `pending.md` P2.
+- ✅ **`TimelineView` 60-day `calculateSchedule`** reran every minute tick — the tick now only reaches the memo while a session is live (plus a day-rollover key), via `Utils/scheduleRefresh.ts`.
+- ✅ **Pending-modal "show once" race** — the session flag was set on open, so a remount before the user saw it swallowed it. `useShowOncePerSession` marks it seen on dismiss, keyed per user. — `hooks/useShowOncePerSession.ts`
 
 ---
 
 ## 🧭 Scheduler Fragility (`Utils/scheduler.ts`)
 
-- ⬜ `fixTime` force-appends `'Z'` (assumes UTC) — tz-fragile. → tied to datetime migration, `pending.md` P0.
+- ✅ `fixTime` force-appended `'Z'` (broke negative offsets and date-only values) — `Utils/serverTime.ts` only normalizes naive timestamps to UTC; tested under `America/New_York`.
 - ⬜ Heavy `as any` + hand-rolled control flow. → `pending.md` P1 (typed API).
 
 ---
@@ -94,3 +94,10 @@ Issues in the codebase, grouped by severity/type. Audited 2026-07-25. **Fix pass
 ## ✅ Checked — No Issue
 
 - **Timers/intervals** — `TimelineView`, `useTimer`, `useWindowDimention`, `ElementStripper` all clean up correctly.
+
+---
+
+## Fixed 2026-10-31 (TaskBoard revive)
+
+- ✅ **Capacity: work beyond the horizon vanished** — with the multi-day horizon every day was capped at 100%, so nobody could read as `over_capacitated` from backlog alone. The last day now absorbs the remainder. Sessions crossing local midnight are split by overlap. Capacity/insights tests run at three frozen instants (business hours, after hours, just past midnight). — `main.py` `_capacity_for_employee`, `_sessions_seconds_on_date`
+

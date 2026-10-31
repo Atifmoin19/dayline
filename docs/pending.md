@@ -39,12 +39,14 @@ creation + progress rollup** (the former deferred multi-assignee ask, resolved b
   are unset everywhere (dev and prod), so `GET /auth/sso/status` reports disabled and the
   button never shows. Needs someone to actually register this app with an IdP (Okta/Azure
   AD/Google Workspace) and set the four `OIDC_*` env vars — not a code gap, a credentials one.
-- [ ] **Full test suite not re-run after the subtask feature.** This round of changes (backend
-  `main.py`/`models.py`, several frontend components) was verified with targeted `tsc --noEmit` +
-  `eslint` on every touched file, `python -c "import main"` sanity imports, and live queries
-  against the dev Postgres — but the actual `pytest`/`Vitest` suites documented as shipped in P3
-  weren't run this pass. Worth a full run before this ships, in case something outside the
-  touched-file set regressed.
+- [ ] **Fresh-database `alembic upgrade head` fails on SQLite** (`no such table: users`): the
+  baseline revision assumes pre-existing tables. Dev/tests use `init_db()` (create_all) instead.
+  Needs a real initial-schema migration before Postgres-from-zero deploys rely on Alembic alone.
+- [ ] **Frontend typecheck is not wired up.** `tsconfig.app.json` lacks the path aliases
+  (`tsc -p tsconfig.app.json` errors on every import) and `tsc -b` fails on the node project
+  reference; `tsc -p tsconfig.json` reports 10 pre-existing errors (`Animations/transtion.tsx`,
+  `Components/ElementStripper.tsx`, one unused import). `npm run build` (Vite) is unaffected.
+- [ ] **`bulk_reset_passwords.py`**: one ruff import-order finding (I001).
 - [ ] **Bulk task CSV upload (`/tasks/upload`) has no subtask column support.** Only
   `POST /tasks`'s `subtasks` field and `POST /tasks/{id}/subtasks` create subtasks; a CSV import
   can't stage them. Low priority — CSV task upload is a bulk/admin path, subtask creation is
@@ -75,8 +77,8 @@ creation + progress rollup** (the former deferred multi-assignee ask, resolved b
 3. `python seed_demo.py` (dry run) → `--yes` — **wipes** old users/tasks and loads
    the 12 fictional demo users from `seed/quillbrook_labs.json`. Default password `ChangeMe123!`.
 4. Prod needs Redis running as real infrastructure now (Celery broker/backend, not just a startup
-   ping) — `docker-compose.prod.yml` already runs `automation_celery_worker` + `automation_celery_beat`
-   alongside `automation_redis`; if deploying outside that compose file, stand up the worker + beat
+   ping) — `docker-compose.prod.yml` already runs `taskboard_celery_worker` + `taskboard_celery_beat`
+   alongside `taskboard_redis`; if deploying outside that compose file, stand up the worker + beat
    processes explicitly or the overdue sweep silently stops running (the old in-process asyncio
    loop it replaced is gone).
 
