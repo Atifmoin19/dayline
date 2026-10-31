@@ -57,15 +57,29 @@ docker compose up
 docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 ```
 
-Both stacks run `automation_backend`, `automation_db` (Postgres), `automation_redis`,
-`automation_celery_worker`, and `automation_celery_beat`; dev additionally runs `pgadmin`.
+Both stacks run `taskboard_backend`, `taskboard_db` (Postgres), `taskboard_redis`,
+`taskboard_celery_worker`, and `taskboard_celery_beat`; dev additionally runs `pgadmin`.
 
 ## Database migrations
 
+A single baseline revision, `0001_initial_schema`, creates the whole schema on an empty
+database (Postgres or SQLite):
+
 ```bash
-python fk_preflight_audit.py   # read-only — reports orphaned rows before the FK migration
 alembic upgrade head
 ```
+
+Existing databases created by the old migration chain (`8d840365c088` .. `0015_add_is_onboarded`,
+kept for reference in `alembic/legacy_versions/`) already have this schema once they are at
+`0015_add_is_onboarded`. Bring them to 0015 first if needed (temporarily point
+`version_locations` at `alembic/legacy_versions`), then record the new baseline:
+
+```bash
+alembic stamp --purge 0001_initial_schema
+```
+
+New schema changes go in new revisions on top of `0001_initial_schema`
+(`alembic revision --autogenerate -m "..."`); `alembic check` should report no drift.
 
 Load the fictional demo org (Quillbrook Labs) (⚠️ **wipes existing users/tasks**):
 

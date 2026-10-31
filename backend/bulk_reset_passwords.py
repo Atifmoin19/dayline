@@ -17,7 +17,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from models import Foundation, SessionLocal, User as UserModel
+from models import Foundation, SessionLocal
+from models import User as UserModel
 from permissions import RANK_EM, get_rank
 from security import hash_password
 

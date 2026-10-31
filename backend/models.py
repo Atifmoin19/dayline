@@ -19,6 +19,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     create_engine,
+    false,
 )
 from sqlalchemy.orm import declarative_base, sessionmaker
 
@@ -96,6 +97,12 @@ class User(Base):
     # (absent from ProfileSelfUpdate).
     special_role = Column(String(32), nullable=True)
 
+    __table_args__ = (
+        CheckConstraint(
+            "special_role IN ('dept_admin', 'auditor')", name="ck_users_special_role",
+        ),
+    )
+
 class Foundation(Base):
     __tablename__ = "foundation"
 
@@ -112,7 +119,7 @@ class Foundation(Base):
     # False until the onboarding wizard (or /register) sets a real password, replacing the
     # bulk-reset default. Backfilled by migration 0015 for pre-existing rows; drives the
     # admin panel's onboarded/pending listing without a per-row bcrypt check on every load.
-    is_onboarded = Column(Boolean, nullable=False, default=False)
+    is_onboarded = Column(Boolean, nullable=False, default=False, server_default=false())
 
 class Task(Base):
     __tablename__ = "tasks"
@@ -151,8 +158,8 @@ class Task(Base):
     # Denormalized subtask rollup (see task_links link_type="subtask"). Recomputed from truth
     # on every write that touches a subtask edge or a child's status — never incremented in
     # place — so it can't drift under concurrent edits. 0 total = not a story, no progress bar.
-    subtask_total = Column(Integer, nullable=False, default=0)
-    subtask_done = Column(Integer, nullable=False, default=0)
+    subtask_total = Column(Integer, nullable=False, default=0, server_default="0")
+    subtask_done = Column(Integer, nullable=False, default=0, server_default="0")
     # Optional link to the Epic this story rolls up into (one level above story — see
     # Epic above). Nullable: most tasks (subtasks, and stories outside any initiative) have
     # no epic. Not restricted to top-level stories at the DB layer (a subtask CAN carry one
@@ -281,7 +288,7 @@ class TaskComment(Base):
     author_id = Column(String(64), nullable=True)             # users.emp_id, or "system"
     author_name = Column(String(255), nullable=True)          # denormalized for display
     body = Column(String(2048), nullable=False)
-    is_system = Column(Boolean, nullable=False, default=False)  # True = auto activity-log entry
+    is_system = Column(Boolean, nullable=False, default=False, server_default=false())  # True = auto activity-log entry
     created_at = Column(DateTime(timezone=True), nullable=True)
 
 
@@ -392,7 +399,7 @@ class Notification(Base):
         ForeignKey("tasks.id", ondelete="SET NULL", name="fk_notifications_task_id"),
         nullable=True,
     )               # deep-link target
-    is_read = Column(Boolean, nullable=False, default=False)
+    is_read = Column(Boolean, nullable=False, default=False, server_default=false())
     created_at = Column(DateTime(timezone=True), nullable=True)
 
 
