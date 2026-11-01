@@ -26,7 +26,7 @@ const ROLES: { persona: DemoPersona; who: string; title: string; shot: string; a
   {
     persona: "manager",
     who: "Odile Marchetti",
-    title: "Chief Technology Officer",
+    title: "Vice President, Engineering",
     shot: "/landing/my-work-manager.webp",
     alt: "The CTO's My Work: 10 active tasks, 8 pending, 1 overdue and 12 team members, with an at-risk task flagged.",
     sees: [

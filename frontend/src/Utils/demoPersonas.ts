@@ -15,7 +15,7 @@ export const DEMO_PERSONAS: DemoPersonaOption[] = [
   {
     persona: "manager",
     label: "Manager",
-    who: "Odile, CTO",
+    who: "Odile, VP of Engineering",
     sees: "Every team: the team timeline, capacity, reports and insights for all 12 people.",
   },
   {

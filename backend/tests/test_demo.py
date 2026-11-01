@@ -50,7 +50,7 @@ def test_demo_creates_full_workspace_and_logs_in_as_manager(client, demo_on, db_
     data = r.json()["data"]
     user = data["userData"]
     assert user["is_demo"] is True
-    assert user["emp_designation"] == "Chief Technology Officer"
+    assert user["emp_designation"] == "Vice President, Engineering"
     assert data["demo"]["persona"] == "manager"
     assert data["demo"]["expires_at"]
 
