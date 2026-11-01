@@ -28,7 +28,7 @@ const ROLES: { persona: DemoPersona; who: string; title: string; shot: string; a
     who: "Odile Marchetti",
     title: "Vice President, Engineering",
     shot: "/landing/my-work-manager.webp",
-    alt: "The CTO's My Work: 10 active tasks, 8 pending, 1 overdue and 12 team members, with an at-risk task flagged.",
+    alt: "The manager's My Work: 10 active tasks, 8 pending, 1 overdue and 12 team members, with an at-risk task flagged.",
     sees: [
       "Every task of the 11 people in her reporting line",
       "The team timeline, week and calendar for anyone below her",
@@ -173,7 +173,7 @@ const Landing = () => {
             <div className="dl-head dl-reveal">
               <p className="dl-eyebrow">Inside the app</p>
               <h2 id="inside-title" className="dl-h2">What you get after you sign in.</h2>
-              <p className="dl-sub">Screens from the demo workspace, as the CTO and as an engineer.</p>
+              <p className="dl-sub">Screens from the demo workspace, as a manager and as an engineer.</p>
             </div>
             <div className="dl-reveal">
               <AppShowcase />

@@ -15,7 +15,7 @@ const SHOTS: Shot[] = [
     id: "my-work", tab: "My Work", title: "Your day at a glance",
     caption: "What is active, pending and overdue, the tasks at risk of slipping, and the team schedule underneath.",
     src: "/landing/my-work-manager.webp",
-    alt: "My Work dashboard for the CTO: counts of active, pending, overdue and completed tasks, an at-risk task flagged high risk, and the team schedule.",
+    alt: "My Work dashboard for the manager: counts of active, pending, overdue and completed tasks, an at-risk task flagged high risk, and the team schedule.",
   },
   {
     id: "timeline", tab: "Timeline", title: "One row per person, one bar per work session",
@@ -51,7 +51,7 @@ const SHOTS: Shot[] = [
     id: "org", tab: "Org chart", title: "The reporting tree decides who sees what",
     caption: "Expand any manager to see their team. Leads see their whole subtree, however deep.",
     src: "/landing/org-manager.webp",
-    alt: "Organization tree with the CTO at the top and operations, product and engineering managers with their reports.",
+    alt: "Organization tree with the VP of Engineering at the top and operations, product and engineering managers with their reports.",
   },
 ];
 
